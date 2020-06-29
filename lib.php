@@ -4,93 +4,158 @@ require_once("$CFG->dirroot/config.php");
 require_once("$CFG->dirroot/lib/adminlib.php");
 require_once("$CFG->dirroot/cohort/lib.php");
 
-function add_academics(){
+function academic(){
 	
 	global $DB;
-	$usersall = array();
-	$table = 'user';
-	$conditions = array('deleted'=>0, 'suspended'=>0, 'department'=>'academic');
-	$fields = 'id';
-	$sortby = '';					
-	$resultusersall = $DB->get_records_menu($table, $conditions, $sortby, $fields);	
 	
-	$cohortid = 6;
+	// add new users to cohort
+	$sql = ("SELECT * FROM mdl_user WHERE deleted = ? AND department = ?");
+	$params = array(0,'academic');	
+	$resultusersall = $DB->get_records_sql($sql, $params);
 
-	foreach($resultusersall as $key => $value){
-		 $usersall[$key] = $key;						
-	}		
+	$cohortid = $DB->get_record('cohort', array(idnumber=>'academic'), 'id');	
 
-	if (empty($usersall)) {
+	if (empty($resultusersall)) {
+		echo "No users </ br>";
+	} else{
+		foreach ($resultusersall as $user) {
+			if ($user->suspended == 0 && !cohort_is_member($cohortid->id, $user->id)) {
+				cohort_add_member($cohortid->id, $user->id);
+			}
+			
+			if($user->suspended == 1 && cohort_is_member($cohortid->id, $user->id)){
+				cohort_remove_member($cohortid->id, $user->id);				
+			}
+		}				
+	}
+
+	//remove invalid users from cohort
+	$sql = ("SELECT * FROM mdl_cohort_members c JOIN mdl_user u ON u.id = c.userid WHERE c.cohortid = ?");
+	$params = array($cohortid->id);	
+	$cohortmembers = $DB->get_records_sql($sql, $params);
+	
+	if (empty($cohortmembers)) {
 		echo "No users </ br>";
 	} else{
 		// process request
-		foreach ($usersall as $user) {
-			if (!$DB->record_exists('cohort_members', array('cohortid'=>$cohortid, 'userid'=>$user))) {
-				//echo $user . "<br />";
-				cohort_add_member($cohortid, $user);
+		foreach ($cohortmembers as $user) {
+			$memberdetails = $DB->get_record('user', array('id'=>$user->userid));
+			if($memberdetails->department != 'academic' || $memberdetails->suspended == 1){
+				cohort_remove_member($cohortid->id, $user->id);		
 			}
 		}		
 	}
-
-	unset($usersall);
 }
 
-function add_support(){
+function support(){
 	
 	global $DB;
-	$usersall = array();
-	$table = 'user';
-	$conditions = array('deleted'=>0, 'suspended'=>0, 'department'=>'support');
-	$fields = 'id';
-	$sortby = '';					
-	$resultusersall = $DB->get_records_menu($table, $conditions, $sortby, $fields);	
 	
-	$cohortid = 7;
+	// add new users to cohort
+	$sql = ("SELECT * FROM mdl_user WHERE deleted = ? AND department = ?");
+	$params = array(0,'support');	
+	$resultusersall = $DB->get_records_sql($sql, $params);
 
-	foreach($resultusersall as $key => $value){
-		 $usersall[$key] = $key;						
-	}		
+	$cohortid = $DB->get_record('cohort', array(idnumber=>'support'), 'id');	
 
-	if (empty($usersall)) {
+	if (empty($resultusersall)) {
+		echo "No users </ br>";
+	} else{
+		foreach ($resultusersall as $user) {
+			if ($user->suspended == 0 && !cohort_is_member($cohortid->id, $user->id)) {
+				cohort_add_member($cohortid->id, $user->id);
+			}
+			
+			if($user->suspended == 1 && cohort_is_member($cohortid->id, $user->id)){
+				cohort_remove_member($cohortid->id, $user->id);				
+			}
+		}				
+	}
+
+	//remove invalid users from cohort
+	$sql = ("SELECT * FROM mdl_cohort_members c JOIN mdl_user u ON u.id = c.userid WHERE c.cohortid = ?");
+	$params = array($cohortid->id);	
+	$cohortmembers = $DB->get_records_sql($sql, $params);
+	
+	if (empty($cohortmembers)) {
 		echo "No users </ br>";
 	} else{
 		// process request
-		foreach ($usersall as $user) {
-			if (!$DB->record_exists('cohort_members', array('cohortid'=>$cohortid, 'userid'=>$user))) {				
-				cohort_add_member($cohortid, $user);
+		foreach ($cohortmembers as $user) {
+			$memberdetails = $DB->get_record('user', array('id'=>$user->userid));
+			if($memberdetails->department != 'support' || $memberdetails->suspended == 1){
+				cohort_remove_member($cohortid->id, $user->id);		
 			}
 		}		
 	}
-
-	unset($usersall);	
 }
 
-function add_management(){
+function management(){
 	
 	global $DB;
-	$usersall = array();
-	$table = 'user';
-	$conditions = array('deleted'=>0, 'suspended'=>0, 'department'=>'management');
-	$fields = 'id';
-	$sortby = '';					
-	$resultusersall = $DB->get_records_menu($table, $conditions, $sortby, $fields);	
 	
-	$cohortid = 8;
+	// add new users to cohort
+	$sql = ("SELECT * FROM mdl_user WHERE deleted = ? AND department = ?");
+	$params = array(0,'management');	
+	$resultusersall = $DB->get_records_sql($sql, $params);
 
-	foreach($resultusersall as $key => $value){
-		 $usersall[$key] = $key;						
-	}		
+	$cohortid = $DB->get_record('cohort', array(idnumber=>'management'), 'id');	
 
-	if (empty($usersall)) {
+	if (empty($resultusersall)) {
+		echo "No users </ br>";
+	} else{
+		foreach ($resultusersall as $user) {
+			if ($user->suspended == 0 && !cohort_is_member($cohortid->id, $user->id)) {
+				cohort_add_member($cohortid->id, $user->id);
+			}
+			
+			if($user->suspended == 1 && cohort_is_member($cohortid->id, $user->id)){
+				cohort_remove_member($cohortid->id, $user->id);				
+			}
+		}				
+	}
+
+	//remove invalid users from cohort
+	$sql = ("SELECT * FROM mdl_cohort_members c JOIN mdl_user u ON u.id = c.userid WHERE c.cohortid = ?");
+	$params = array($cohortid->id);	
+	$cohortmembers = $DB->get_records_sql($sql, $params);
+	
+	if (empty($cohortmembers)) {
 		echo "No users </ br>";
 	} else{
 		// process request
-		foreach ($usersall as $user) {
-			if (!$DB->record_exists('cohort_members', array('cohortid'=>$cohortid, 'userid'=>$user))) {
-				cohort_add_member($cohortid, $user);
+		foreach ($cohortmembers as $user) {
+			$memberdetails = $DB->get_record('user', array('id'=>$user->userid));
+			if($memberdetails->department != 'management' || $memberdetails->suspended == 1){
+				cohort_remove_member($cohortid->id, $user->id);		
 			}
 		}		
-	}
+	}	
+}
 
-	unset($usersall);		
+
+function mydevelopment(){
+	
+	global $DB;
+	
+	$sql = ("SELECT * FROM mdl_user WHERE deleted = ? AND (department = ? OR department = ? OR department = ?) AND email NOT LIKE ? AND email NOT LIKE ? AND email NOT LIKE ? AND email LIKE ?");
+	$params = array(0, 'support', 'academic', 'management', 'academic%', 'consultant%', 'jobshop%', '%@solent.ac.uk');	
+	$resultusersall = $DB->get_records_sql($sql, $params);
+
+	$cohortid = $DB->get_record('cohort', array(idnumber=>'mydevelopment'), 'id');	
+
+	if (empty($resultusersall)) {
+		echo "No users </ br>";
+	} else{
+		// process request
+		foreach ($resultusersall as $user) {
+			if ($user->suspended == 0 && !cohort_is_member($cohortid->id, $user->id)) {
+				cohort_add_member($cohortid->id, $user->id);
+			}
+			
+			if($user->suspended == 1 && cohort_is_member($cohortid->id, $user->id)){
+				cohort_remove_member($cohortid->id, $user->id);				
+			}
+		}		
+	}	
 }

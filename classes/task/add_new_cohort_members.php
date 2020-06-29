@@ -11,8 +11,10 @@ class add_new_cohort_members extends \core\task\scheduled_task {
     public function execute() {       
 		global $CFG;
         require_once($CFG->dirroot.'/local/cohorts/lib.php');
-		add_academics();
-		add_support();
-		add_management();
+		// academic();
+		// support();
+		// management();
+		// mydevelopment();
+		student();
     }                                                                                                                               
 } 

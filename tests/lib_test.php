@@ -52,32 +52,33 @@ class lib_test extends advanced_testcase {
             'idnumber' => 'academic'
         ]);
 
-        // No-one to add.
-        academic();
-        $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
-        $this->assertEquals(0, count($premembers));
-
-        // Create people to add.
-        $academics = [];
-        $nonacademics = [];
-        $oldacademicsactive = [];
-        $academicssuspended = [];
+        $members = [];
+        $nonmembers = [];
+        $oldmembersactive = [];
+        $memberssuspended = [];
         for ($x = 0; $x < 5; $x++) {
-            $academics[] = $this->getDataGenerator()->create_user([
-                'department' => 'academic'
-            ]);
-            $nonacademics[] = $this->getDataGenerator()->create_user();
-            $oldacademicsactive[] = $this->getDataGenerator()->create_user();
-            $academicssuspended[] = $this->getDataGenerator()->create_user([
+            $nonmembers[] = $this->getDataGenerator()->create_user();
+            $oldmembersactive[] = $this->getDataGenerator()->create_user();
+            $memberssuspended[] = $this->getDataGenerator()->create_user([
                 'suspended' => 1,
                 'department' => 'academic'
             ]);
         }
-        // Prefill the cohort with people that will be removed.
-        foreach ($oldacademicsactive as $academic) {
-            cohort_add_member($cohort->id, $academic->id);
+        // No-one to add.
+        academic();
+        $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        $this->assertEquals(0, count($premembers));
+        // Generate some valid accounts.
+        for ($x = 0; $x < 5; $x++) {
+            $members[] = $this->getDataGenerator()->create_user([
+                'department' => 'academic'
+            ]);
         }
-        foreach ($academicssuspended as $suspended) {
+        // Prefill the cohort with people that will be removed.
+        foreach ($oldmembersactive as $oldmember) {
+            cohort_add_member($cohort->id, $oldmember->id);
+        }
+        foreach ($memberssuspended as $suspended) {
             cohort_add_member($cohort->id, $suspended->id);
         }
         $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
@@ -86,8 +87,65 @@ class lib_test extends advanced_testcase {
         $this->assertCount(10, $premembers);
         $this->assertCount(5, $postmembers);
         $this->expectOutputRegex("/added to 'academic' cohort/");
-        foreach ($academics as $academic) {
-            $this->assertTrue(cohort_is_member($cohort->id, $academic->id));
+        foreach ($members as $member) {
+            $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+        }
+        foreach ($premembers as $premember) {
+            $this->assertNotTrue(cohort_is_member($cohort->id, $premember->userid));
+        }
+    }
+
+    /**
+     * Test adding and removal of support users.
+     *
+     * @return void
+     */
+    public function test_support() {
+        global $DB;
+        // Create cohort.
+        $cohort = $this->getDataGenerator()->create_cohort([
+            'name' => 'Support',
+            'idnumber' => 'support'
+        ]);
+        // Create people to add.
+        $members = [];
+        $nonmembers = [];
+        $oldmembersactive = [];
+        $memberssuspended = [];
+        for ($x = 0; $x < 5; $x++) {
+            $nonmembers[] = $this->getDataGenerator()->create_user();
+            $oldmembersactive[] = $this->getDataGenerator()->create_user();
+            $memberssuspended[] = $this->getDataGenerator()->create_user([
+                'suspended' => 1,
+                'department' => 'support'
+            ]);
+        }
+        // No-one to add.
+        support();
+        $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        $this->assertEquals(0, count($premembers));
+
+        // Generate some valid accounts.
+        for ($x = 0; $x < 5; $x++) {
+            $members[] = $this->getDataGenerator()->create_user([
+                'department' => 'support'
+            ]);
+        }
+        // Prefill the cohort with people that will be removed.
+        foreach ($oldmembersactive as $oldmember) {
+            cohort_add_member($cohort->id, $oldmember->id);
+        }
+        foreach ($memberssuspended as $suspended) {
+            cohort_add_member($cohort->id, $suspended->id);
+        }
+        $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        support();
+        $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        $this->assertCount(10, $premembers);
+        $this->assertCount(5, $postmembers);
+        $this->expectOutputRegex("/added to 'support' cohort/");
+        foreach ($members as $member) {
+            $this->assertTrue(cohort_is_member($cohort->id, $member->id));
         }
         foreach ($premembers as $premember) {
             $this->assertNotTrue(cohort_is_member($cohort->id, $premember->userid));

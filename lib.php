@@ -99,38 +99,27 @@ function support() {
  */
 function management() {
     global $DB;
-    $sql = ("SELECT * FROM {user} WHERE deleted = ? AND department = ?");
-    $params = array(0, 'management');
-    $resultusersall = $DB->get_records_sql($sql, $params);
-
-    $cohortid = $DB->get_record('cohort', array('idnumber' => 'management'), 'id');
-
-    if (empty($resultusersall)) {
-        echo "No users </ br>";
-    } else {
-        foreach ($resultusersall as $user) {
-            if ($user->suspended == 0 && !cohort_is_member($cohortid->id, $user->id)) {
-                cohort_add_member($cohortid->id, $user->id);
+    $validusers = $DB->get_records('user', ['deleted' => 0, 'department' => 'management']);
+    $cohortid = $DB->get_field('cohort', 'id', ['idnumber' => 'management']);
+    if ($validusers) {
+        foreach ($validusers as $user) {
+            if ($user->suspended == 0 && !cohort_is_member($cohortid, $user->id)) {
+                cohort_add_member($cohortid, $user->id);
+                mtrace("{$user->username} added to 'management' cohort");
             }
-            if ($user->suspended == 1 && cohort_is_member($cohortid->id, $user->id)) {
-                cohort_remove_member($cohortid->id, $user->id);
+            if ($user->suspended == 1 && cohort_is_member($cohortid, $user->id)) {
+                cohort_remove_member($cohortid, $user->id);
+                mtrace("{$user->username} removed from 'management' cohort");
             }
         }
     }
-
+    $newmembers = $DB->get_records('cohort_members', ['cohortid' => $cohortid]);
     // Remove invalid users from cohort.
-    $sql = ("SELECT * FROM {cohort_members} c JOIN {user} u ON u.id = c.userid WHERE c.cohortid = ?");
-    $params = array($cohortid->id);
-    $cohortmembers = $DB->get_records_sql($sql, $params);
-
-    if (empty($cohortmembers)) {
-        echo "No users </ br>";
-    } else {
-        foreach ($cohortmembers as $user) {
-            $memberdetails = $DB->get_record('user', array('id' => $user->userid));
-            if ($memberdetails->department != 'management' || $memberdetails->suspended == 1) {
-                cohort_remove_member($cohortid->id, $user->id);
-            }
+    foreach ($newmembers as $member) {
+        $memberdetails = $DB->get_record('user', array('id' => $member->userid));
+        if ($memberdetails->department != 'management' || $memberdetails->suspended == 1) {
+            cohort_remove_member($cohortid, $member->userid);
+            mtrace("{$memberdetails->username} removed from 'management' cohort");
         }
     }
 }

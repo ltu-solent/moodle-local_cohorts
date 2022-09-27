@@ -41,7 +41,7 @@ function academic() {
     $params = array(0, 'academic');
     $resultusersall = $DB->get_records_sql($sql, $params);
 
-    $cohortid = $DB->get_record('cohort', array(idnumber => 'academic'), 'id');
+    $cohortid = $DB->get_record('cohort', array('idnumber' => 'academic'), 'id');
 
     if (empty($resultusersall)) {
         echo "No users </ br>";
@@ -86,7 +86,7 @@ function support() {
     $params = array(0, 'support');
     $resultusersall = $DB->get_records_sql($sql, $params);
 
-    $cohortid = $DB->get_record('cohort', array(idnumber => 'support'), 'id');
+    $cohortid = $DB->get_record('cohort', array('idnumber' => 'support'), 'id');
 
     if (empty($resultusersall)) {
         echo "No users </ br>";
@@ -130,7 +130,7 @@ function management() {
     $params = array(0, 'management');
     $resultusersall = $DB->get_records_sql($sql, $params);
 
-    $cohortid = $DB->get_record('cohort', array(idnumber => 'management'), 'id');
+    $cohortid = $DB->get_record('cohort', array('idnumber' => 'management'), 'id');
 
     if (empty($resultusersall)) {
         echo "No users </ br>";
@@ -175,7 +175,7 @@ function mydevelopment() {
     $params = array(0, 'support', 'academic', 'management', 'academic%', 'consultant%', 'jobshop%', '%@solent.ac.uk');
     $resultusersall = $DB->get_records_sql($sql, $params);
 
-    $cohortid = $DB->get_record('cohort', array(idnumber => 'mydevelopment'), 'id');
+    $cohortid = $DB->get_record('cohort', array('idnumber' => 'mydevelopment'), 'id');
 
     if (empty($resultusersall)) {
         echo "No users </ br>";
@@ -206,7 +206,7 @@ function student6() {
     $params = array(0, 0, 'student');
     $resultusersall = $DB->get_records_sql($sql, $params);
 
-    $cohortid = $DB->get_record('cohort', array(idnumber => 'student6'), 'id');
+    $cohortid = $DB->get_record('cohort', array('idnumber' => 'student6'), 'id');
 
     if (empty($resultusersall)) {
         echo "No users </ br>";

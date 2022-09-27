@@ -25,6 +25,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version  = 2016093001;
+$plugin->version  = 2016093002;
 $plugin->requires = 2015111603;
 $plugin->component = 'local_cohorts';

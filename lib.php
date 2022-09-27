@@ -37,7 +37,7 @@ function academic() {
     global $DB;
 
     // Add new users to cohort.
-    $sql = ("SELECT * FROM mdl_user WHERE deleted = ? AND department = ?");
+    $sql = ("SELECT * FROM {user} WHERE deleted = ? AND department = ?");
     $params = array(0, 'academic');
     $resultusersall = $DB->get_records_sql($sql, $params);
 
@@ -57,7 +57,7 @@ function academic() {
     }
 
     // Remove invalid users from cohort.
-    $sql = ("SELECT * FROM mdl_cohort_members c JOIN mdl_user u ON u.id = c.userid WHERE c.cohortid = ?");
+    $sql = ("SELECT * FROM {cohort_members} c JOIN {user} u ON u.id = c.userid WHERE c.cohortid = ?");
     $params = array($cohortid->id);
     $cohortmembers = $DB->get_records_sql($sql, $params);
 
@@ -82,7 +82,7 @@ function academic() {
 function support() {
     global $DB;
 
-    $sql = ("SELECT * FROM mdl_user WHERE deleted = ? AND department = ?");
+    $sql = ("SELECT * FROM {user} WHERE deleted = ? AND department = ?");
     $params = array(0, 'support');
     $resultusersall = $DB->get_records_sql($sql, $params);
 
@@ -103,7 +103,7 @@ function support() {
     }
 
     // Remove invalid users from cohort.
-    $sql = ("SELECT * FROM mdl_cohort_members c JOIN mdl_user u ON u.id = c.userid WHERE c.cohortid = ?");
+    $sql = ("SELECT * FROM {cohort_members} c JOIN {user} u ON u.id = c.userid WHERE c.cohortid = ?");
     $params = array($cohortid->id);
     $cohortmembers = $DB->get_records_sql($sql, $params);
 
@@ -126,7 +126,7 @@ function support() {
  */
 function management() {
     global $DB;
-    $sql = ("SELECT * FROM mdl_user WHERE deleted = ? AND department = ?");
+    $sql = ("SELECT * FROM {user} WHERE deleted = ? AND department = ?");
     $params = array(0, 'management');
     $resultusersall = $DB->get_records_sql($sql, $params);
 
@@ -146,7 +146,7 @@ function management() {
     }
 
     // Remove invalid users from cohort.
-    $sql = ("SELECT * FROM mdl_cohort_members c JOIN mdl_user u ON u.id = c.userid WHERE c.cohortid = ?");
+    $sql = ("SELECT * FROM {cohort_members} c JOIN {user} u ON u.id = c.userid WHERE c.cohortid = ?");
     $params = array($cohortid->id);
     $cohortmembers = $DB->get_records_sql($sql, $params);
 
@@ -170,7 +170,7 @@ function management() {
 function mydevelopment() {
     global $DB;
 
-    $sql = "SELECT * FROM mdl_user WHERE deleted = ? AND (department = ? OR department = ? OR department = ?)
+    $sql = "SELECT * FROM {user} WHERE deleted = ? AND (department = ? OR department = ? OR department = ?)
 		AND email NOT LIKE ? AND email NOT LIKE ? AND email NOT LIKE ? AND email LIKE ?";
     $params = array(0, 'support', 'academic', 'management', 'academic%', 'consultant%', 'jobshop%', '%@solent.ac.uk');
     $resultusersall = $DB->get_records_sql($sql, $params);
@@ -200,7 +200,7 @@ function student6() {
     global $DB;
 
     $sql = "SELECT *
-            FROM mdl_user
+            FROM {user}
             WHERE (timecreated > unix_timestamp((NOW()) - INTERVAL 6 MONTH)
             AND  deleted = ? AND suspended = ? AND department = ?)";
     $params = array(0, 0, 'student');
@@ -219,9 +219,9 @@ function student6() {
     }
 
     $sql = ("SELECT u.id, c.id cohortid
-            FROM mdl_cohort_members cm
-            JOIN mdl_user u ON u.id = cm.userid
-            JOIN mdl_cohort c ON c.id = cm.cohortid
+            FROM {cohort_members} cm
+            JOIN {user} u ON u.id = cm.userid
+            JOIN {cohort} c ON c.id = cm.cohortid
             WHERE c.idnumber = ?
             AND (u.timecreated < unix_timestamp((NOW()) - INTERVAL 6 MONTH)
             OR (suspended = 1 OR deleted = 1 OR department != 'student'))");

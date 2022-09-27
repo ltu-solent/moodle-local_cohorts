@@ -191,6 +191,11 @@ function mydevelopment() {
     }
 }
 
+/**
+ * Process new students to a 6 month only cohort.
+ *
+ * @return void
+ */
 function student6() {
     global $DB;
 

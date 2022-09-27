@@ -151,4 +151,61 @@ class lib_test extends advanced_testcase {
             $this->assertNotTrue(cohort_is_member($cohort->id, $premember->userid));
         }
     }
+
+    /**
+     * Test adding and removal of management users on Management cohort.
+     *
+     * @return void
+     */
+    public function test_management() {
+        global $DB;
+        // Create cohort.
+        $cohort = $this->getDataGenerator()->create_cohort([
+            'name' => 'Management',
+            'idnumber' => 'management'
+        ]);
+        // Create people to add.
+        $members = [];
+        $nonmembers = [];
+        $oldmembersactive = [];
+        $memberssuspended = [];
+        for ($x = 0; $x < 5; $x++) {
+            $nonmembers[] = $this->getDataGenerator()->create_user();
+            $oldmembersactive[] = $this->getDataGenerator()->create_user();
+            $memberssuspended[] = $this->getDataGenerator()->create_user([
+                'suspended' => 1,
+                'department' => 'management'
+            ]);
+        }
+        // No-one to add.
+        management();
+        $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        $this->assertEquals(0, count($premembers));
+
+        // Generate some valid accounts.
+        for ($x = 0; $x < 5; $x++) {
+            $members[] = $this->getDataGenerator()->create_user([
+                'department' => 'management'
+            ]);
+        }
+        // Prefill the cohort with people that will be removed.
+        foreach ($oldmembersactive as $oldmember) {
+            cohort_add_member($cohort->id, $oldmember->id);
+        }
+        foreach ($memberssuspended as $suspended) {
+            cohort_add_member($cohort->id, $suspended->id);
+        }
+        $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        management();
+        $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        $this->assertCount(10, $premembers);
+        $this->assertCount(5, $postmembers);
+        $this->expectOutputRegex("/added to 'management' cohort/");
+        foreach ($members as $member) {
+            $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+        }
+        foreach ($premembers as $premember) {
+            $this->assertNotTrue(cohort_is_member($cohort->id, $premember->userid));
+        }
+    }
 }

@@ -67,7 +67,7 @@ class lib_test extends advanced_testcase {
             ]);
         }
         // No-one to add.
-        academic();
+        \academic();
         $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
         $this->assertEquals(0, count($premembers));
         // Generate some valid accounts.
@@ -84,7 +84,7 @@ class lib_test extends advanced_testcase {
             cohort_add_member($cohort->id, $suspended->id);
         }
         $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
-        academic();
+        \academic();
         $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
         $this->assertCount(10, $premembers);
         $this->assertCount(5, $postmembers);
@@ -123,7 +123,7 @@ class lib_test extends advanced_testcase {
             ]);
         }
         // No-one to add.
-        support();
+        \support();
         $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
         $this->assertEquals(0, count($premembers));
 
@@ -141,7 +141,7 @@ class lib_test extends advanced_testcase {
             cohort_add_member($cohort->id, $suspended->id);
         }
         $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
-        support();
+        \support();
         $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
         $this->assertCount(10, $premembers);
         $this->assertCount(5, $postmembers);
@@ -180,7 +180,7 @@ class lib_test extends advanced_testcase {
             ]);
         }
         // No-one to add.
-        management();
+        \management();
         $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
         $this->assertEquals(0, count($premembers));
 
@@ -198,7 +198,7 @@ class lib_test extends advanced_testcase {
             cohort_add_member($cohort->id, $suspended->id);
         }
         $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
-        management();
+        \management();
         $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
         $this->assertCount(10, $premembers);
         $this->assertCount(5, $postmembers);
@@ -265,7 +265,7 @@ class lib_test extends advanced_testcase {
             ]);
         }
         // No-one to add.
-        mydevelopment();
+        \mydevelopment();
         $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
         $this->assertEquals(0, count($premembers));
 
@@ -292,7 +292,7 @@ class lib_test extends advanced_testcase {
             cohort_add_member($cohort->id, $suspended->id);
         }
         $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
-        mydevelopment();
+        \mydevelopment();
         $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
         $this->assertCount(10, $premembers);
         $this->assertCount(25, $postmembers);
@@ -336,7 +336,7 @@ class lib_test extends advanced_testcase {
         $withinsixmonths = [];
         $otherusers = [];
         // There are no users to add or take away.
-        student6();
+        \student6();
         for ($x = 0; $x < 5; $x++) {
             $sixmonthsplus[$x] = $this->getDataGenerator()->create_user([
                 'department' => 'student',
@@ -352,7 +352,7 @@ class lib_test extends advanced_testcase {
         foreach ($premembers as $member) {
             $this->assertTrue(cohort_is_member($cohort->id, $member->userid));
         }
-        student6();
+        \student6();
         $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
         $this->assertCount(5, $premembers);
         $this->assertCount(5, $postmembers);

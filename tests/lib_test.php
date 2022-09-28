@@ -25,6 +25,9 @@
 
 namespace local_cohorts;
 
+defined('MOODLE_INTERNAL') || die();
+global $CFG;
+require_once($CFG->dirroot . '/local/cohorts/lib.php');
 use advanced_testcase;
 
 /**

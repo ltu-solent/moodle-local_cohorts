@@ -320,4 +320,48 @@ class lib_test extends advanced_testcase {
         }
         // phpcs:enable
     }
+
+    public function test_student6() {
+        global $DB;
+        $cohort = $this->getDataGenerator()->create_cohort([
+            'name' => 'Six months',
+            'idnumber' => 'student6'
+        ]);
+        // Students joined 6+ months ago.
+        // Students joined within 6 months.
+        // Other users.
+        // Is the DB timezone the same as PHP?
+        $sixmonthsago = time() - (strtotime("-7 months"));
+        $sixmonthsplus = [];
+        $withinsixmonths = [];
+        $otherusers = [];
+        // There are no users to add or take away.
+        student6();
+        for ($x = 0; $x < 5; $x++) {
+            $sixmonthsplus[$x] = $this->getDataGenerator()->create_user([
+                'department' => 'student',
+                'timecreated' => $sixmonthsago
+            ]);
+            cohort_add_member($cohort->id, $sixmonthsplus[$x]->id);
+            $withinsixmonths[] = $this->getDataGenerator()->create_user([
+                'department' => 'student'
+            ]);
+            $otherusers[] = $this->getDataGenerator()->create_user();
+        }
+        $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        foreach ($premembers as $member) {
+            $this->assertTrue(cohort_is_member($cohort->id, $member->userid));
+        }
+        student6();
+        $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        $this->assertCount(5, $premembers);
+        $this->assertCount(5, $postmembers);
+        foreach ($postmembers as $member) {
+            $this->assertTrue(cohort_is_member($cohort->id, $member->userid));
+        }
+        foreach ($premembers as $member) {
+            $this->assertNotTrue(cohort_is_member($cohort->id, $member->userid));
+        }
+        $this->expectOutputRegex("/added to 'student6' cohort/");
+    }
 }

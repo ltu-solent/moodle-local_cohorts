@@ -187,31 +187,25 @@ function student6() {
 
     $cohortid = $DB->get_record('cohort', array('idnumber' => 'student6'), 'id');
 
-    if (empty($resultusersall)) {
-        echo "No users </ br>";
-    } else {
-        foreach ($resultusersall as $user) {
-            if (!cohort_is_member($cohortid->id, $user->id)) {
-                cohort_add_member($cohortid->id, $user->id);
-            }
+    foreach ($resultusersall as $user) {
+        if (!cohort_is_member($cohortid->id, $user->id)) {
+            cohort_add_member($cohortid->id, $user->id);
+            mtrace("{$user->username} added to 'student6' cohort");
         }
     }
 
-    $sql = ("SELECT u.id, c.id cohortid
+    $sql = ("SELECT u.id, c.id cohortid, u.username
             FROM {cohort_members} cm
             JOIN {user} u ON u.id = cm.userid
             JOIN {cohort} c ON c.id = cm.cohortid
-            WHERE c.idnumber = ?
+            WHERE c.idnumber = :cohortidnumber
             AND (u.timecreated < unix_timestamp((NOW()) - INTERVAL 6 MONTH)
             OR (suspended = 1 OR deleted = 1 OR department != 'student'))");
-    $params = array($cohortid->idnumber = 'student6');
+    $params = ['cohortidnumber' => 'student6'];
     $cohortmembers = $DB->get_records_sql($sql, $params);
 
-    if (empty($cohortmembers)) {
-        echo "No users </ br>";
-    } else {
-        foreach ($cohortmembers as $user) {
-            cohort_remove_member($user->cohortid, $user->id);
-        }
+    foreach ($cohortmembers as $user) {
+        cohort_remove_member($user->cohortid, $user->id);
+        mtrace("{$user->username} removed from 'student6' cohort");
     }
 }

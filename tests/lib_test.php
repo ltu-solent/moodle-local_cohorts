@@ -331,7 +331,7 @@ class lib_test extends advanced_testcase {
         // Students joined within 6 months.
         // Other users.
         // Is the DB timezone the same as PHP?
-        $sixmonthsago = time() - (strtotime("-7 months"));
+        $sixmonthsago = strtotime("-7 months");
         $sixmonthsplus = [];
         $withinsixmonths = [];
         $otherusers = [];

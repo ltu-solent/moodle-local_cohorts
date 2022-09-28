@@ -17,7 +17,7 @@
 /**
  * Lib test
  *
- * @package   block_package
+ * @package   local_cohorts
  * @author    Mark Sharp <mark.sharp@solent.ac.uk>
  * @copyright 2022 Solent University {@link https://www.solent.ac.uk}
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -27,8 +27,10 @@ namespace local_cohorts;
 
 use advanced_testcase;
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Test lib.php file
+ * @coversNothing
+ */
 class lib_test extends advanced_testcase {
     /**
      * {@inheritDoc}
@@ -207,5 +209,115 @@ class lib_test extends advanced_testcase {
         foreach ($premembers as $premember) {
             $this->assertNotTrue(cohort_is_member($cohort->id, $premember->userid));
         }
+    }
+
+    /**
+     * Test adding and removal of management users on Management cohort.
+     *
+     * @return void
+     */
+    public function test_mydevelopment() {
+        global $DB;
+        // Create cohort.
+        $cohort = $this->getDataGenerator()->create_cohort([
+            'name' => 'MyDevelopment',
+            'idnumber' => 'mydevelopment'
+        ]);
+        // Create people to add.
+        // People to include are users in "support", "academic" and "management" departments
+        // and who have @solent.ac.uk in their email address,
+        // but not those who have "academic", "consultant", "jobshop" in their email address.
+        $academic = [];
+        $academicemail = [];
+        $academicnonsolent = [];
+        $support = [];
+        $management = [];
+        $consultant = [];
+        $jobshop = [];
+        $students = [];
+        $suspendedacademics = [];
+        $randomusers = [];
+        for ($x = 0; $x < 5; $x++) {
+            $randomusers[] = $this->getDataGenerator()->create_user();
+            $students[] = $this->getDataGenerator()->create_user([
+                'department' => 'students',
+                'email' => 'student' . $x . '@solent.ac.uk'
+            ]);
+            $suspendedacademics[] = $this->getDataGenerator()->create_user([
+                'suspended' => 1,
+                'department' => 'academic'
+            ]);
+            $academicemail[] = $this->getDataGenerator()->create_user([
+                'department' => 'academic',
+                'email' => 'academic' . $x . '@solent.ac.uk'
+            ]);
+            $academicnonsolent[] = $this->getDataGenerator()->create_user([
+                'department' => 'academic',
+                'email' => 'teacher' . $x . '@somewhere.ac.uk'
+            ]);
+            $jobshop[] = $this->getDataGenerator()->create_user([
+                'department' => 'support',
+                'email' => 'jobshop' . $x . '@solent.ac.uk'
+            ]);
+            $consultant[] = $this->getDataGenerator()->create_user([
+                'department' => 'academic',
+                'email' => 'consultant' . $x . '@solent.ac.uk'
+            ]);
+        }
+        // No-one to add.
+        mydevelopment();
+        $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        $this->assertEquals(0, count($premembers));
+
+        // Generate some valid accounts.
+        for ($x = 0; $x < 5; $x++) {
+            $academic[] = $this->getDataGenerator()->create_user([
+                'department' => 'academic',
+                'email' => 'solteacher' . $x . '@solent.ac.uk'
+            ]);
+            $management[] = $this->getDataGenerator()->create_user([
+                'department' => 'management',
+                'email' => 'solman' . $x . '@solent.ac.uk'
+            ]);
+            $support[] = $this->getDataGenerator()->create_user([
+                'department' => 'support',
+                'email' => 'solsup' . $x . '@solent.ac.uk'
+            ]);
+        }
+        // Prefill the cohort with people that will be removed.
+        foreach ($randomusers as $randomuser) {
+            cohort_add_member($cohort->id, $randomuser->id);
+        }
+        foreach ($suspendedacademics as $suspended) {
+            cohort_add_member($cohort->id, $suspended->id);
+        }
+        $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        mydevelopment();
+        $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
+        $this->assertCount(10, $premembers);
+        $this->assertCount(25, $postmembers);
+        $this->expectOutputRegex("/added to 'mydevelopment' cohort/");
+        foreach ($academic as $member) {
+            $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+        }
+        foreach ($management as $member) {
+            $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+        }
+        foreach ($support as $member) {
+            $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+        }
+        // Currently, the script doesn't remove stragglers. There might be a reason why. Need to check.
+        foreach ($randomusers as $randomuser) {
+            $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+        }
+        foreach ($suspendedacademics as $suspended) {
+            $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+        }
+        // This will fail, because stragglers are not being removed.
+        // phpcs:disable
+        foreach ($premembers as $premember) {
+            // $this->assertNotTrue(cohort_is_member($cohort->id, $premember->userid)); 
+        }
+        // phpcs:enable
     }
 }

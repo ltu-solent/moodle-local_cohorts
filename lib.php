@@ -132,25 +132,42 @@ function management() {
 function mydevelopment() {
     global $DB;
 
-    $sql = "SELECT * FROM {user} WHERE deleted = ? AND (department = ? OR department = ? OR department = ?)
-		AND email NOT LIKE ? AND email NOT LIKE ? AND email NOT LIKE ? AND email LIKE ?";
-    $params = array(0, 'support', 'academic', 'management', 'academic%', 'consultant%', 'jobshop%', '%@solent.ac.uk');
+    // People to include are users in "support", "academic" and "management" departments
+    // and who have @solent.ac.uk in their email address,
+    // but not those who have "academic", "consultant", "jobshop" in their email address.
+    [$insql, $inparams] = $DB->get_in_or_equal(['academic', 'support', 'management'], SQL_PARAMS_NAMED);
+    $academiclike = $DB->sql_like('email', ':academicemail', false, false, true);
+    $consultantlike = $DB->sql_like('email', ':consultantemail', false, false, true);
+    $jobshoplike = $DB->sql_like('email', ':jobshopemail', false, false, true);
+    $solentlike = $DB->sql_like('email', ':solent', false, false);
+    $sql = "SELECT *
+            FROM {user}
+            WHERE deleted = 0
+                AND (department $insql)
+		        AND ({$academiclike} AND {$consultantlike} AND {$jobshoplike})
+                AND {$solentlike}";
+    $params = $inparams + [
+        'academicemail' => 'academic%',
+        'consultantemail' => 'consultant%',
+        'jobshopemail' => 'jobshop%',
+        'solent' => '%@solent.ac.uk'
+    ];
     $resultusersall = $DB->get_records_sql($sql, $params);
 
     $cohortid = $DB->get_record('cohort', array('idnumber' => 'mydevelopment'), 'id');
 
-    if (empty($resultusersall)) {
-        echo "No users </ br>";
-    } else {
-        foreach ($resultusersall as $user) {
-            if ($user->suspended == 0 && !cohort_is_member($cohortid->id, $user->id)) {
-                cohort_add_member($cohortid->id, $user->id);
-            }
-            if ($user->suspended == 1 && cohort_is_member($cohortid->id, $user->id)) {
-                cohort_remove_member($cohortid->id, $user->id);
-            }
+    foreach ($resultusersall as $user) {
+        if ($user->suspended == 0 && !cohort_is_member($cohortid->id, $user->id)) {
+            cohort_add_member($cohortid->id, $user->id);
+            mtrace("{$user->username} added to 'mydevelopment' cohort");
+        }
+        if ($user->suspended == 1 && cohort_is_member($cohortid->id, $user->id)) {
+            cohort_remove_member($cohortid->id, $user->id);
+            mtrace("{$user->username} removed from 'mydevelopment' cohort");
         }
     }
+    // This script doesn't currently remove any suspended users unless they meet the selective criteria
+    // in the first place.
 }
 
 /**

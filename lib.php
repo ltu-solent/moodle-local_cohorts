@@ -177,12 +177,12 @@ function mydevelopment() {
  */
 function student6() {
     global $DB;
-
+    $sixmonthsago = strtotime('-6 months');
     $sql = "SELECT *
             FROM {user}
-            WHERE (timecreated > unix_timestamp((NOW()) - INTERVAL 6 MONTH)
-            AND  deleted = ? AND suspended = ? AND department = ?)";
-    $params = array(0, 0, 'student');
+            WHERE (timecreated > :sixmonthsago
+            AND  deleted = 0 AND suspended = 0 AND department = 'student')";
+    $params = ['sixmonthsago' => $sixmonthsago];
     $resultusersall = $DB->get_records_sql($sql, $params);
 
     $cohortid = $DB->get_record('cohort', array('idnumber' => 'student6'), 'id');
@@ -199,9 +199,9 @@ function student6() {
             JOIN {user} u ON u.id = cm.userid
             JOIN {cohort} c ON c.id = cm.cohortid
             WHERE c.idnumber = :cohortidnumber
-            AND (u.timecreated < unix_timestamp((NOW()) - INTERVAL 6 MONTH)
+            AND (u.timecreated < :sixmonthsago
             OR (suspended = 1 OR deleted = 1 OR department != 'student'))");
-    $params = ['cohortidnumber' => 'student6'];
+    $params = ['cohortidnumber' => 'student6', 'sixmonthsago' => $sixmonthsago];
     $cohortmembers = $DB->get_records_sql($sql, $params);
 
     foreach ($cohortmembers as $user) {

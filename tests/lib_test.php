@@ -33,6 +33,7 @@ use advanced_testcase;
 /**
  * Test lib.php file
  * @coversNothing
+ * @group sol
  */
 class lib_test extends advanced_testcase {
     /**

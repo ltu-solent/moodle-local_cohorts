@@ -52,7 +52,7 @@ function academic() {
     $newmembers = $DB->get_records('cohort_members', ['cohortid' => $cohortid]);
     // Remove invalid users from cohort.
     foreach ($newmembers as $member) {
-        $memberdetails = $DB->get_record('user', array('id' => $member->userid));
+        $memberdetails = $DB->get_record('user', ['id' => $member->userid]);
         if ($memberdetails->department != 'academic' || $memberdetails->suspended == 1) {
             cohort_remove_member($cohortid, $member->userid);
             mtrace("{$memberdetails->username} removed from 'academic' cohort");
@@ -84,7 +84,7 @@ function support() {
     $newmembers = $DB->get_records('cohort_members', ['cohortid' => $cohortid]);
     // Remove invalid users from cohort.
     foreach ($newmembers as $member) {
-        $memberdetails = $DB->get_record('user', array('id' => $member->userid));
+        $memberdetails = $DB->get_record('user', ['id' => $member->userid]);
         if ($memberdetails->department != 'support' || $memberdetails->suspended == 1) {
             cohort_remove_member($cohortid, $member->userid);
             mtrace("{$memberdetails->username} removed from 'support' cohort");
@@ -116,7 +116,7 @@ function management() {
     $newmembers = $DB->get_records('cohort_members', ['cohortid' => $cohortid]);
     // Remove invalid users from cohort.
     foreach ($newmembers as $member) {
-        $memberdetails = $DB->get_record('user', array('id' => $member->userid));
+        $memberdetails = $DB->get_record('user', ['id' => $member->userid]);
         if ($memberdetails->department != 'management' || $memberdetails->suspended == 1) {
             cohort_remove_member($cohortid, $member->userid);
             mtrace("{$memberdetails->username} removed from 'management' cohort");
@@ -150,11 +150,11 @@ function mydevelopment() {
         'academicemail' => 'academic%',
         'consultantemail' => 'consultant%',
         'jobshopemail' => 'jobshop%',
-        'solent' => '%@solent.ac.uk'
+        'solent' => '%@solent.ac.uk',
     ];
     $resultusersall = $DB->get_records_sql($sql, $params);
 
-    $cohortid = $DB->get_record('cohort', array('idnumber' => 'mydevelopment'), 'id');
+    $cohortid = $DB->get_record('cohort', ['idnumber' => 'mydevelopment'], 'id');
 
     foreach ($resultusersall as $user) {
         if ($user->suspended == 0 && !cohort_is_member($cohortid->id, $user->id)) {
@@ -185,7 +185,7 @@ function student6() {
     $params = ['sixmonthsago' => $sixmonthsago];
     $resultusersall = $DB->get_records_sql($sql, $params);
 
-    $cohortid = $DB->get_record('cohort', array('idnumber' => 'student6'), 'id');
+    $cohortid = $DB->get_record('cohort', ['idnumber' => 'student6'], 'id');
 
     foreach ($resultusersall as $user) {
         if (!cohort_is_member($cohortid->id, $user->id)) {

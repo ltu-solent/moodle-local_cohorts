@@ -55,7 +55,7 @@ class lib_test extends advanced_testcase {
         // Create cohort.
         $cohort = $this->getDataGenerator()->create_cohort([
             'name' => 'Academic',
-            'idnumber' => 'academic'
+            'idnumber' => 'academic',
         ]);
 
         $members = [];
@@ -67,7 +67,7 @@ class lib_test extends advanced_testcase {
             $oldmembersactive[] = $this->getDataGenerator()->create_user();
             $memberssuspended[] = $this->getDataGenerator()->create_user([
                 'suspended' => 1,
-                'department' => 'academic'
+                'department' => 'academic',
             ]);
         }
         // No-one to add.
@@ -77,7 +77,7 @@ class lib_test extends advanced_testcase {
         // Generate some valid accounts.
         for ($x = 0; $x < 5; $x++) {
             $members[] = $this->getDataGenerator()->create_user([
-                'department' => 'academic'
+                'department' => 'academic',
             ]);
         }
         // Prefill the cohort with people that will be removed.
@@ -111,7 +111,7 @@ class lib_test extends advanced_testcase {
         // Create cohort.
         $cohort = $this->getDataGenerator()->create_cohort([
             'name' => 'Support',
-            'idnumber' => 'support'
+            'idnumber' => 'support',
         ]);
         // Create people to add.
         $members = [];
@@ -123,7 +123,7 @@ class lib_test extends advanced_testcase {
             $oldmembersactive[] = $this->getDataGenerator()->create_user();
             $memberssuspended[] = $this->getDataGenerator()->create_user([
                 'suspended' => 1,
-                'department' => 'support'
+                'department' => 'support',
             ]);
         }
         // No-one to add.
@@ -134,7 +134,7 @@ class lib_test extends advanced_testcase {
         // Generate some valid accounts.
         for ($x = 0; $x < 5; $x++) {
             $members[] = $this->getDataGenerator()->create_user([
-                'department' => 'support'
+                'department' => 'support',
             ]);
         }
         // Prefill the cohort with people that will be removed.
@@ -168,7 +168,7 @@ class lib_test extends advanced_testcase {
         // Create cohort.
         $cohort = $this->getDataGenerator()->create_cohort([
             'name' => 'Management',
-            'idnumber' => 'management'
+            'idnumber' => 'management',
         ]);
         // Create people to add.
         $members = [];
@@ -180,7 +180,7 @@ class lib_test extends advanced_testcase {
             $oldmembersactive[] = $this->getDataGenerator()->create_user();
             $memberssuspended[] = $this->getDataGenerator()->create_user([
                 'suspended' => 1,
-                'department' => 'management'
+                'department' => 'management',
             ]);
         }
         // No-one to add.
@@ -191,7 +191,7 @@ class lib_test extends advanced_testcase {
         // Generate some valid accounts.
         for ($x = 0; $x < 5; $x++) {
             $members[] = $this->getDataGenerator()->create_user([
-                'department' => 'management'
+                'department' => 'management',
             ]);
         }
         // Prefill the cohort with people that will be removed.
@@ -225,7 +225,7 @@ class lib_test extends advanced_testcase {
         // Create cohort.
         $cohort = $this->getDataGenerator()->create_cohort([
             'name' => 'MyDevelopment',
-            'idnumber' => 'mydevelopment'
+            'idnumber' => 'mydevelopment',
         ]);
         // Create people to add.
         // People to include are users in "support", "academic" and "management" departments
@@ -245,27 +245,27 @@ class lib_test extends advanced_testcase {
             $randomusers[] = $this->getDataGenerator()->create_user();
             $students[] = $this->getDataGenerator()->create_user([
                 'department' => 'students',
-                'email' => 'student' . $x . '@solent.ac.uk'
+                'email' => 'student' . $x . '@solent.ac.uk',
             ]);
             $suspendedacademics[] = $this->getDataGenerator()->create_user([
                 'suspended' => 1,
-                'department' => 'academic'
+                'department' => 'academic',
             ]);
             $academicemail[] = $this->getDataGenerator()->create_user([
                 'department' => 'academic',
-                'email' => 'academic' . $x . '@solent.ac.uk'
+                'email' => 'academic' . $x . '@solent.ac.uk',
             ]);
             $academicnonsolent[] = $this->getDataGenerator()->create_user([
                 'department' => 'academic',
-                'email' => 'teacher' . $x . '@somewhere.ac.uk'
+                'email' => 'teacher' . $x . '@somewhere.ac.uk',
             ]);
             $jobshop[] = $this->getDataGenerator()->create_user([
                 'department' => 'support',
-                'email' => 'jobshop' . $x . '@solent.ac.uk'
+                'email' => 'jobshop' . $x . '@solent.ac.uk',
             ]);
             $consultant[] = $this->getDataGenerator()->create_user([
                 'department' => 'academic',
-                'email' => 'consultant' . $x . '@solent.ac.uk'
+                'email' => 'consultant' . $x . '@solent.ac.uk',
             ]);
         }
         // No-one to add.
@@ -277,15 +277,15 @@ class lib_test extends advanced_testcase {
         for ($x = 0; $x < 5; $x++) {
             $academic[] = $this->getDataGenerator()->create_user([
                 'department' => 'academic',
-                'email' => 'solteacher' . $x . '@solent.ac.uk'
+                'email' => 'solteacher' . $x . '@solent.ac.uk',
             ]);
             $management[] = $this->getDataGenerator()->create_user([
                 'department' => 'management',
-                'email' => 'solman' . $x . '@solent.ac.uk'
+                'email' => 'solman' . $x . '@solent.ac.uk',
             ]);
             $support[] = $this->getDataGenerator()->create_user([
                 'department' => 'support',
-                'email' => 'solsup' . $x . '@solent.ac.uk'
+                'email' => 'solsup' . $x . '@solent.ac.uk',
             ]);
         }
         // Prefill the cohort with people that will be removed.
@@ -329,7 +329,7 @@ class lib_test extends advanced_testcase {
         global $DB;
         $cohort = $this->getDataGenerator()->create_cohort([
             'name' => 'Six months',
-            'idnumber' => 'student6'
+            'idnumber' => 'student6',
         ]);
         // Students joined 6+ months ago.
         // Students joined within 6 months.
@@ -344,11 +344,11 @@ class lib_test extends advanced_testcase {
         for ($x = 0; $x < 5; $x++) {
             $sixmonthsplus[$x] = $this->getDataGenerator()->create_user([
                 'department' => 'student',
-                'timecreated' => $sixmonthsago
+                'timecreated' => $sixmonthsago,
             ]);
             cohort_add_member($cohort->id, $sixmonthsplus[$x]->id);
             $withinsixmonths[] = $this->getDataGenerator()->create_user([
-                'department' => 'student'
+                'department' => 'student',
             ]);
             $otherusers[] = $this->getDataGenerator()->create_user();
         }

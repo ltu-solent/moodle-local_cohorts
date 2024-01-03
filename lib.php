@@ -35,8 +35,11 @@ require_once("$CFG->dirroot/cohort/lib.php");
  */
 function academic() {
     global $DB;
-    $validusers = $DB->get_records('user', ['deleted' => 0, 'department' => 'academic']);
     $cohortid = $DB->get_field('cohort', 'id', ['idnumber' => 'academic']);
+    if (!$cohortid) {
+        return;
+    }
+    $validusers = $DB->get_records('user', ['deleted' => 0, 'department' => 'academic']);
     if ($validusers) {
         foreach ($validusers as $user) {
             if ($user->suspended == 0 && !cohort_is_member($cohortid, $user->id)) {
@@ -67,8 +70,11 @@ function academic() {
  */
 function support() {
     global $DB;
-    $validusers = $DB->get_records('user', ['deleted' => 0, 'department' => 'support']);
     $cohortid = $DB->get_field('cohort', 'id', ['idnumber' => 'support']);
+    if (!$cohortid) {
+        return;
+    }
+    $validusers = $DB->get_records('user', ['deleted' => 0, 'department' => 'support']);
     if ($validusers) {
         foreach ($validusers as $user) {
             if ($user->suspended == 0 && !cohort_is_member($cohortid, $user->id)) {
@@ -99,8 +105,11 @@ function support() {
  */
 function management() {
     global $DB;
-    $validusers = $DB->get_records('user', ['deleted' => 0, 'department' => 'management']);
     $cohortid = $DB->get_field('cohort', 'id', ['idnumber' => 'management']);
+    if (!$cohortid) {
+        return;
+    }
+    $validusers = $DB->get_records('user', ['deleted' => 0, 'department' => 'management']);
     if ($validusers) {
         foreach ($validusers as $user) {
             if ($user->suspended == 0 && !cohort_is_member($cohortid, $user->id)) {
@@ -131,7 +140,10 @@ function management() {
  */
 function mydevelopment() {
     global $DB;
-
+    $cohortid = $DB->get_record('cohort', ['idnumber' => 'mydevelopment'], 'id');
+    if (!$cohortid) {
+        return;
+    }
     // People to include are users in "support", "academic" and "management" departments
     // and who have @solent.ac.uk in their email address,
     // but not those who have "academic", "consultant", "jobshop" in their email address.
@@ -154,8 +166,6 @@ function mydevelopment() {
     ];
     $resultusersall = $DB->get_records_sql($sql, $params);
 
-    $cohortid = $DB->get_record('cohort', ['idnumber' => 'mydevelopment'], 'id');
-
     foreach ($resultusersall as $user) {
         if ($user->suspended == 0 && !cohort_is_member($cohortid->id, $user->id)) {
             cohort_add_member($cohortid->id, $user->id);
@@ -177,6 +187,10 @@ function mydevelopment() {
  */
 function student6() {
     global $DB;
+    $cohortid = $DB->get_record('cohort', ['idnumber' => 'student6'], 'id');
+    if (!$cohortid) {
+        return;
+    }
     $sixmonthsago = strtotime('-6 months');
     $sql = "SELECT *
             FROM {user}
@@ -184,8 +198,6 @@ function student6() {
             AND  deleted = 0 AND suspended = 0 AND department = 'student')";
     $params = ['sixmonthsago' => $sixmonthsago];
     $resultusersall = $DB->get_records_sql($sql, $params);
-
-    $cohortid = $DB->get_record('cohort', ['idnumber' => 'student6'], 'id');
 
     foreach ($resultusersall as $user) {
         if (!cohort_is_member($cohortid->id, $user->id)) {

@@ -15,16 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version file for cohort
+ * TODO describe file settings
  *
- * @package   local_cohorts
- * @author    Mark Sharp <mark.sharp@solent.ac.uk>
- * @copyright 2022 Solent University {@link https://www.solent.ac.uk}
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package    local_cohorts
+ * @copyright  2024 Solent University {@link https://www.solent.ac.uk}
+ * @author Mark Sharp <mark.sharp@solent.ac.uk>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+ defined('MOODLE_INTERNAL') || die();
 
-$plugin->version  = 2024013000;
-$plugin->requires = 2015111603;
-$plugin->component = 'local_cohorts';
+if ($hassiteconfig) {
+    $settings = new theme_boost_admin_settingspage_tabs('local_cohorts', get_string('pluginname', 'local_cohorts'));
+    include($CFG->dirroot . '/local/cohorts/settings/system.php');
+    include($CFG->dirroot . '/local/cohorts/settings/department.php');
+    $ADMIN->add('localplugins', $settings);
+}

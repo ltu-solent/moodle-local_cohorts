@@ -25,4 +25,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$string['pluginname'] = "Add new cohort members";
+$string['addnewcohortmembers'] = 'Add new cohort members';
+
+$string['departmentcohorts'] = 'Department cohorts';
+$string['emailexcludepattern'] = 'Email exclude pattern';
+$string['emailexcludepattern_desc'] = 'Comma separated list of email patterns that are not included in the system cohorts. ' .
+    'i.e. if the email address contains any of the text, it is excluded.';
+
+$string['pluginname'] = "SOL Cohorts";
+
+$string['systemcohorts'] = 'System cohorts';
+$string['systemcohorts_desc'] = 'Comma separated list of system cohort shortcodes';

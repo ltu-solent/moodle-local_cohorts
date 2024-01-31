@@ -15,16 +15,16 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Version file for cohort
+ * TODO describe file department
  *
- * @package   local_cohorts
- * @author    Mark Sharp <mark.sharp@solent.ac.uk>
- * @copyright 2022 Solent University {@link https://www.solent.ac.uk}
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package    local_cohorts
+ * @copyright  2024 Solent University {@link https://www.solent.ac.uk}
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version  = 2024013000;
-$plugin->requires = 2015111603;
-$plugin->component = 'local_cohorts';
+$page = new admin_settingpage('local_cohorts_department', new lang_string('departmentcohorts', 'local_cohorts'));
+// Add settings for dept processing.
+$settings->add($page);

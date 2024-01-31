@@ -26,6 +26,14 @@
 
 namespace local_cohorts\task;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->dirroot.'/local/cohorts/lib.php');
+
+use context_system;
+use local_cohorts\helper;
+use stdClass;
+
 /**
  * Add new cohort members
  */
@@ -36,7 +44,7 @@ class add_new_cohort_members extends \core\task\scheduled_task {
      * @return string
      */
     public function get_name() {
-        return get_string('pluginname', 'local_cohorts');
+        return get_string('addnewcohortmembers', 'local_cohorts');
     }
 
     /**
@@ -45,12 +53,25 @@ class add_new_cohort_members extends \core\task\scheduled_task {
      * @return void
      */
     public function execute() {
-        global $CFG;
-        require_once($CFG->dirroot.'/local/cohorts/lib.php');
-        academic();
-        support();
-        management();
-        mydevelopment();
+        global $DB;
+        $config = get_config('local_cohorts');
+        $depts = explode(',', trim($config->systemcohorts));
+        $context = context_system::instance();
+        foreach ($depts as $dept) {
+            if (empty($dept)) {
+                continue;
+            }
+            $cohortid = $DB->get_field('cohort', 'id', ['idnumber' => $dept]);
+            // Create the system cohort if it doesn't exist.
+            if (!$cohortid) {
+                $cohort = new stdClass();
+                $cohort->name = ucwords($dept);
+                $cohort->idnumber = $dept;
+                $cohort->contextid = $context->id;
+                $cohortid = cohort_add_cohort($cohort);
+            }
+            helper::update_user_department_cohort($cohortid);
+        }
         student6();
     }
 }

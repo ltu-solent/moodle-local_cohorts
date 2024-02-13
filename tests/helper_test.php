@@ -16,6 +16,8 @@
 
 namespace local_cohorts;
 
+use context_system;
+
 /**
  * Tests for SOL Cohorts
  *
@@ -38,7 +40,7 @@ class helper_test extends \advanced_testcase {
         // I don't want events to trigger for this test.
         $sink = $this->redirectEvents();
         // Create users for each department.
-        $systemcohorts = ['academic' => null, 'management' => null, 'support' => null];
+        $systemcohorts = ['academic' => null, 'management' => null, 'support' => null, 'sys_warsash-maritime-school' => null];
         $supportaccounts = ['academic', 'consultant', 'jobshop'];
         set_config('systemcohorts', join(',', array_keys($systemcohorts)), 'local_cohorts');
         set_config('emailexcludepattern', join(',', $supportaccounts), 'local_cohorts');
@@ -137,21 +139,17 @@ class helper_test extends \advanced_testcase {
      * @return void
      */
     public function test_sync_user_department($before, $after) {
+        global $DB;
         $this->resetAfterTest();
-        $systemcohorts = ['academic' => null, 'management' => null, 'support' => null];
+        $systemcontext = context_system::instance();
         $supportaccounts = ['academic', 'consultant', 'jobshop'];
-        set_config('systemcohorts', join(',', array_keys($systemcohorts)), 'local_cohorts');
+        set_config('staffcohorts', 'academic,management,support', 'local_cohorts');
         set_config('emailexcludepattern', join(',', $supportaccounts), 'local_cohorts');
-        foreach ($systemcohorts as $key => $cohort) {
-            $systemcohorts[$key] = $this->getDataGenerator()->create_cohort([
-                'name' => ucwords($key),
-                'idnumber' => $key,
-            ]);
-        }
-        $randomcohort = $this->getDataGenerator()->create_cohort(['idnumber' => 'random']);
 
         // This will trigger the user_created event.
+        $before['user']['auth'] = 'ldap';
         $user = $this->getDataGenerator()->create_user($before['user']);
+        $systemcohorts = $DB->get_records_sql("SELECT idnumber, id, name FROM {cohort} WHERE contextid=:contextid", ['contextid' => $systemcontext->id]);
         foreach ($systemcohorts as $idnumber => $cohort) {
             $ismember = cohort_is_member($cohort->id, $user->id);
             if (in_array($idnumber, $before['ismember'])) {
@@ -175,18 +173,18 @@ class helper_test extends \advanced_testcase {
             user_delete_user($user);
         } else {
             // This will trigger the user_updated event.
-            user_update_user($user, false, true);
+            user_update_user($user, false);
         }
 
-        foreach ($systemcohorts as $idnumber => $cohort) {
+        $systemcohorts = $DB->get_records('cohort', ['contextid' => $systemcontext->id]);
+        foreach ($systemcohorts as $cohort) {
             $ismember = cohort_is_member($cohort->id, $user->id);
-            if (in_array($idnumber, $after['ismember'])) {
+            if (in_array($cohort->idnumber, $after['ismember'])) {
                 $this->assertTrue($ismember);
             } else {
                 $this->assertFalse($ismember);
             }
         }
-        $this->assertFalse(cohort_is_member($randomcohort->id, $user->id));
     }
 
     /**
@@ -207,7 +205,26 @@ class helper_test extends \advanced_testcase {
                     'user' => [
                         'department' => 'academic',
                     ],
-                    'ismember' => ['academic'],
+                    'ismember' => ['academic', 'all-staff'],
+                ],
+            ],
+            'solent_academic_wms' => [
+                'before' => [
+                    'user' => [
+                        'email' => 'john.smith@solent.ac.uk',
+                    ],
+                    'ismember' => [],
+                ],
+                'after' => [
+                    'user' => [
+                        'department' => 'academic',
+                        'institution' => 'Warsash Maritime School',
+                    ],
+                    'ismember' => [
+                        'academic',
+                        'all-staff',
+                        'inst_warsash-maritime-school',
+                    ],
                 ],
             ],
             'support_academic' => [
@@ -230,7 +247,7 @@ class helper_test extends \advanced_testcase {
                         'department' => 'academic',
                         'email' => 'john.smith@solent.ac.uk',
                     ],
-                    'ismember' => ['academic'],
+                    'ismember' => ['academic', 'all-staff'],
                 ],
                 'after' => [
                     'user' => [
@@ -254,7 +271,7 @@ class helper_test extends \advanced_testcase {
                         'department' => 'academic',
                         'suspended' => 0,
                     ],
-                    'ismember' => ['academic'],
+                    'ismember' => ['academic', 'all-staff'],
                 ],
             ],
             'solent_academic_deleted' => [
@@ -263,7 +280,7 @@ class helper_test extends \advanced_testcase {
                         'department' => 'academic',
                         'email' => 'john.smith@solent.ac.uk',
                     ],
-                    'ismember' => ['academic'],
+                    'ismember' => ['academic', 'all-staff'],
                 ],
                 'after' => [
                     'user' => [
@@ -320,13 +337,13 @@ class helper_test extends \advanced_testcase {
                         'email' => 'john.smith@solent.ac.uk',
                         'department' => 'academic',
                     ],
-                    'ismember' => ['academic'],
+                    'ismember' => ['academic', 'all-staff'],
                 ],
                 'after' => [
                     'user' => [
                         'department' => 'support',
                     ],
-                    'ismember' => ['support'],
+                    'ismember' => ['support', 'all-staff'],
                 ],
             ],
             'random_dept' => [
@@ -335,24 +352,24 @@ class helper_test extends \advanced_testcase {
                         'department' => 'random',
                         'email' => 'john.smith@solent.ac.uk',
                     ],
-                    'ismember' => [],
+                    'ismember' => ['random'],
                 ],
                 'after' => [
                     'user' => [],
-                    'ismember' => [],
+                    'ismember' => ['random'],
                 ],
             ],
-            'student_no_cohort' => [
+            'student' => [
                 'before' => [
                     'user' => [
                         'department' => 'student',
                         'email' => 'smithj1@solent.ac.uk',
                     ],
-                    'ismember' => [],
+                    'ismember' => ['student'],
                 ],
                 'after' => [
                     'user' => [],
-                    'ismember' => [],
+                    'ismember' => ['student'],
                 ],
             ],
         ];

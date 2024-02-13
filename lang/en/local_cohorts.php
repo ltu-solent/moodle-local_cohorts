@@ -34,5 +34,6 @@ $string['emailexcludepattern_desc'] = 'Comma separated list of email patterns th
 
 $string['pluginname'] = "SOL Cohorts";
 
+$string['staffcohorts'] = 'Staff cohorts';
+$string['staffcohorts_desc'] = 'Comma separated list of staff cohort shortcodes used in the user "department" field';
 $string['systemcohorts'] = 'System cohorts';
-$string['systemcohorts_desc'] = 'Comma separated list of system cohort shortcodes';

@@ -26,9 +26,9 @@ defined('MOODLE_INTERNAL') || die();
 
 $page = new admin_settingpage('local_cohorts_system', new lang_string('systemcohorts', 'local_cohorts'));
 
-$name = 'local_cohorts/systemcohorts';
-$title = new lang_string('systemcohorts', 'local_cohorts');
-$desc = new lang_string('systemcohorts_desc', 'local_cohorts');
+$name = 'local_cohorts/staffcohorts';
+$title = new lang_string('staffcohorts', 'local_cohorts');
+$desc = new lang_string('staffcohorts_desc', 'local_cohorts');
 $default = 'academic,management,support';
 $setting = new admin_setting_configtext($name, $title, $desc, $default, PARAM_TEXT);
 $page->add($setting);

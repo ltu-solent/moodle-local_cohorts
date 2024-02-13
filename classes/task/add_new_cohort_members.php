@@ -55,22 +55,40 @@ class add_new_cohort_members extends \core\task\scheduled_task {
     public function execute() {
         global $DB;
         $config = get_config('local_cohorts');
-        $depts = explode(',', trim($config->systemcohorts));
+        // This will create student, external etc.
+        $depts = $DB->get_records_sql("SELECT DISTINCT(department) as department FROM {user} WHERE deleted = 0 AND suspended = 0");
         $context = context_system::instance();
         foreach ($depts as $dept) {
-            if (empty($dept)) {
+            if (empty(trim($dept->department))) {
                 continue;
             }
-            $cohortid = $DB->get_field('cohort', 'id', ['idnumber' => $dept]);
+            $cohortid = $DB->get_field('cohort', 'id', ['idnumber' => $dept->department, 'contextid' => $context->id]);
             // Create the system cohort if it doesn't exist.
             if (!$cohortid) {
                 $cohort = new stdClass();
-                $cohort->name = ucwords($dept);
-                $cohort->idnumber = $dept;
+                $cohort->name = ucwords($dept->department);
+                $cohort->idnumber = $dept->department;
                 $cohort->contextid = $context->id;
                 $cohortid = cohort_add_cohort($cohort);
             }
             helper::update_user_department_cohort($cohortid);
+        }
+        $institutions = $DB->get_records_sql("SELECT DISTINCT(institution) as insitution FROM {user} WHERE deleted = 0 AND suspended = 0");
+        foreach ($institutions as $id => $institution) {
+            if (empty(trim($institution->institution))) {
+                continue;
+            }
+            // Institution is a normal string, so need to make a sluggy string.
+            $slug = 'inst_' . helper::slugify($institution->institution);
+            $cohortid = $DB->get_field('cohort', 'id', ['idnumber' => $slug, 'contextid' => $context->id]);
+            if (!$cohortid) {
+                $cohort = new stdClass();
+                $cohort->name = $institution->institution;
+                $cohort->idnumber = $slug;
+                $cohort->contextid = $context->id;
+                $cohortid = cohort_add_cohort($cohort);
+            }
+            helper::update_user_department_cohort($cohortid, 'institution');
         }
         student6();
     }

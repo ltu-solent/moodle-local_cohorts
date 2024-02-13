@@ -18,6 +18,7 @@ namespace local_cohorts;
 
 use context_system;
 use core_user;
+use stdClass;
 
 /**
  * Class helper
@@ -72,10 +73,16 @@ class helper {
      * @param int $cohortid
      * @return void
      */
-    public static function update_user_department_cohort(int $cohortid) {
+    public static function update_user_department_cohort(int $cohortid, string $field = 'department') {
         global $DB;
         $config = get_config('local_cohorts');
         $cohort = $DB->get_record('cohort', ['id' => $cohortid]);
+        if (!$cohort) {
+            return;
+        }
+        if (!in_array($field, ['department', 'institution'])) {
+            return;
+        }
         $existingmembers = $DB->get_records_select('cohort_members',
             'cohortid = :cohortid', [
                 'cohortid' => $cohortid,
@@ -101,7 +108,7 @@ class helper {
         }
         $solentlike = $DB->sql_like('email', ':solent', false, false);
         $select = "deleted = 0 AND suspended = 0
-            AND (department = :department)
+            AND ({$field} = :department)
             {$emailnotlike}
             AND {$solentlike}";
         $params = [
@@ -143,52 +150,68 @@ class helper {
         global $DB;
         $config = get_config('local_cohorts');
         $user = core_user::get_user($userid);
-        $systemcohorts = trim($config->systemcohorts);
-        if ($systemcohorts == '') {
+        if ($user->auth != 'ldap') {
             return;
         }
-        $depts = explode(',', $systemcohorts);
-        [$insql, $inparams] = $DB->get_in_or_equal($depts, SQL_PARAMS_NAMED);
         $systemcontext = context_system::instance();
         $inparams['userid'] = $userid;
         $inparams['contextid'] = $systemcontext->id;
         $existingmembership = $DB->get_records_sql("
             SELECT c.id, c.idnumber, c.name
             FROM {cohort} c
-            JOIN {cohort_members} cm ON cm.userid = :userid
-            WHERE c.idnumber {$insql}
-            AND c.contextid = :contextid
+            JOIN {cohort_members} cm ON cm.cohortid = c.id AND cm.userid = :userid
+            WHERE c.contextid = :contextid
         ", $inparams);
-        if (empty($user->department) && count($existingmembership) == 0) {
+        // If not a member of anything and has no dept or inst, stop here.
+        if ((empty(trim($user->department)) && empty(trim($user->institution))) && count($existingmembership) == 0) {
             return;
         }
-        // If user is in no department or has been suspended remove from all system cohorts.
-        if (empty($user->department) || $user->suspended == 1) {
+        // If user has been suspended remove from all system cohorts.
+        if ($user->suspended == 1) {
             foreach ($existingmembership as $cohort) {
-                cohort_remove_member($cohort->id, $userid);
+                cohort_remove_member($cohort->id, $user->id);
             }
+            // Could remove system roles here too.
             return;
         }
+
+        $drop = false;
+        // This is checking the username part of the email address for things like "consultant001" which would have a solent domain.
         $emailexcludepattern = $config->emailexcludepattern ?? '';
         $excludeemails = [];
         if (!empty($emailexcludepattern)) {
             $excludeemails = explode(',', $emailexcludepattern);
         }
-        $drop = false;
         foreach ($excludeemails as $excludeemail) {
             // This user shouldn't be in any of these cohorts.
             if (strpos($user->email, $excludeemail) === 0) {
                 $drop = true;
             }
         }
+
         // Not a solent email address.
         if (strpos($user->email, '@solent.ac.uk') === false) {
             $drop = true;
         }
 
-        // Has the user changed department?
+        // Valid Staff cohort departments for creating all-staff.
+        $staffcohortsconfig = $config->staffcohorts ?? '';
+        $staffcohorts = [];
+        if (!empty($staffcohortsconfig)) {
+            $staffcohorts = explode(',', $staffcohortsconfig);
+        }
+        $isstaff = in_array($user->department, $staffcohorts);
+
         foreach ($existingmembership as $existing) {
-            if ($existing->idnumber != $user->department) {
+            $type = explode('_', $existing->idnumber)[0];
+            $value = $user->department;
+            if ($type == 'inst') {
+                $value = helper::slugify($user->institution);
+            }
+
+            if ($existing->idnumber == 'all-staff' && !$isstaff) {
+                cohort_remove_member($existing->id, $userid);
+            } else if ($existing->idnumber != $value) {
                 cohort_remove_member($existing->id, $userid);
             }
             // Doesn't have a valid email address.
@@ -200,14 +223,78 @@ class helper {
             // Already dropped, and not adding to anything.
             return;
         }
-        if (!in_array($user->department, $depts)) {
-            // We're not adding people to this department.
-            return;
+
+        if (!empty(trim($user->department))) {
+            $deptcohortid = $DB->get_field('cohort', 'id', [
+                'idnumber' => $user->department,
+                'contextid' => $systemcontext->id,
+            ]);
+            if (!$deptcohortid) {
+                $cohort = new stdClass();
+                $cohort->contextid = $systemcontext->id;
+                $cohort->name = ucwords($user->department);
+                $cohort->idnumber = $user->department;
+                $deptcohortid = cohort_add_cohort($cohort);
+            }
+            if ($deptcohortid && !cohort_is_member($deptcohortid, $userid)) {
+                cohort_add_member($deptcohortid, $userid);
+            }
         }
 
-        $cohortid = $DB->get_field('cohort', 'id', ['idnumber' => $user->department]);
-        if ($cohortid) {
-            cohort_add_member($cohortid, $userid);
+        if (!empty(trim($user->institution))) {
+            $instslug = 'inst_' . helper::slugify($user->institution);
+            $instcohortid = $DB->get_field('cohort', 'id', [
+                'idnumber' => $instslug,
+                'contextid' => $systemcontext->id,
+            ]);
+            if (!$instcohortid) {
+                $cohort = new stdClass();
+                $cohort->contextid = $systemcontext->id;
+                $cohort->name = $user->institution;
+                $cohort->idnumber = $instslug;
+                $instcohortid = cohort_add_cohort($cohort);
+            }
+            if ($instcohortid && !cohort_is_member($instcohortid, $userid)) {
+                cohort_add_member($instcohortid, $userid);
+            }
         }
+
+        $staffcohortid = $DB->get_field('cohort', 'id', [
+            'idnumber' => 'all-staff',
+            'contextid' => $systemcontext->id,
+        ]);
+        if (!$staffcohortid) {
+            $cohort = new stdClass();
+            $cohort->contextid = $systemcontext->id;
+            $cohort->name = 'All staff';
+            $cohort->idnumber = 'all-staff';
+            $staffcohortid = cohort_add_cohort($cohort);
+        }
+        if ($isstaff && !cohort_is_member($staffcohortid, $userid)) {
+            cohort_add_member($staffcohortid, $userid);
+        }
+    }
+
+    /**
+     * Create machine-friendly class from name
+     *
+     * @param string $text
+     * @return string
+     */
+    public static function slugify($text): string {
+        // Replace non letter or digits by -.
+        $text = preg_replace('~[^\pL\d]+~u', '-', $text);
+        // Transliterate.
+        $text = iconv('utf-8', 'us-ascii//TRANSLIT', $text);
+        // Remove unwanted characters.
+        $text = preg_replace('~[^-\w]+~', '', $text);
+        $text = trim($text, '-');
+        // Remove duplicate -.
+        $text = preg_replace('~-+~', '-', $text);
+        $text = strtolower($text);
+        if (empty($text)) {
+            return 'n-a';
+        }
+        return $text;
     }
 }

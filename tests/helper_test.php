@@ -37,93 +37,164 @@ class helper_test extends \advanced_testcase {
     public function test_update_user_department_cohort() {
         global $DB;
         $this->resetAfterTest();
+        $systemcontext = context_system::instance();
         // I don't want events to trigger for this test.
         $sink = $this->redirectEvents();
         // Create users for each department.
-        $systemcohorts = ['academic' => null, 'management' => null, 'support' => null, 'sys_warsash-maritime-school' => null];
         $supportaccounts = ['academic', 'consultant', 'jobshop'];
-        set_config('systemcohorts', join(',', array_keys($systemcohorts)), 'local_cohorts');
+        set_config('staffcohorts', 'academic,management,support', 'local_cohorts');
         set_config('emailexcludepattern', join(',', $supportaccounts), 'local_cohorts');
         $cohortusers = [];
         $counter = 0;
         $supportusers = [];
-        foreach ($systemcohorts as $key => $cohort) {
-            $systemcohorts[$key] = $this->getDataGenerator()->create_cohort([
-                'name' => ucwords($key),
-                'idnumber' => $key,
-            ]);
+        $systemcohorts = [];
+
+        $deptcohorts = ['academic', 'management', 'support', 'student'];
+        $instcohorts = [
+            'Warshash Maritime School',
+            'Information & Communications Technology',
+            'Arts and Music',
+            'Social Sciences and Nursing',
+            'Science and Engineering',
+        ];
+
+        foreach ($deptcohorts as $dept) {
+            if (!$DB->record_exists('cohort', ['idnumber' => $dept, 'contextid' => $systemcontext->id])) {
+                $systemcohorts[$dept] = $this->getDataGenerator()->create_cohort([
+                    'name' => ucwords($dept),
+                    'idnumber' => $dept,
+                    'contextid' => $systemcontext->id,
+                ]);
+            }
+            $cohort = $systemcohorts[$dept];
+
             for ($x = 0; $x < 5; $x++) {
+                $institution = $instcohorts[$x];
+                // Students don't get the institution field filled.
+                if ($dept == 'student') {
+                    $institution = '';
+                }
                 // Preexisting cohort member.
                 $user = $this->getDataGenerator()->create_user([
-                    'department' => $key,
-                    'email' => 'user' . $x . $counter . '@solent.ac.uk',
+                    'department' => $dept,
+                    'institution' => $institution,
+                    'email' => 'preuser' . $x . $counter . '@solent.ac.uk',
+                    'username' => 'preuser' . $x . $counter,
                 ]);
-                cohort_add_member($systemcohorts[$key]->id, $user->id);
-                $cohortusers[$key]['activemembers'][] = $user;
+                cohort_add_member($cohort->id, $user->id);
+                $cohortusers[$dept]['activemembers'][] = $user;
 
                 // Member to be added by function.
                 $user = $this->getDataGenerator()->create_user([
-                    'department' => $key,
-                    'email' => 'user' . $x . $counter . '@solent.ac.uk',
+                    'department' => $dept,
+                    'institution' => $institution,
+                    'email' => 'postuser' . $x . $counter . '@solent.ac.uk',
+                    'username' => 'postuser' . $x . $counter,
                 ]);
-                $cohortusers[$key]['newmembers'][] = $user;
+                $cohortusers[$dept]['newmembers'][] = $user;
 
                 // Suspended member who will be removed.
                 $user = $this->getDataGenerator()->create_user([
-                    'department' => $key,
+                    'department' => $dept,
+                    'institution' => $institution,
                     'suspended' => 1,
-                    'email' => 'user' . $x . $counter . '@solent.ac.uk',
+                    'email' => 'usersuspended' . $x . $counter . '@solent.ac.uk',
+                    'username' => 'usersuspended' . $x . $counter,
                 ]);
-                cohort_add_member($systemcohorts[$key]->id, $user->id);
-                $cohortusers[$key]['suspendedmembers'][] = $user;
+                cohort_add_member($cohort->id, $user->id);
+                $cohortusers[$dept]['suspendedmembers'][] = $user;
 
                 // Some support accounts that shouldn't be added.
                 foreach ($supportaccounts as $supportaccount) {
-                    $supportusers[$key][] = $this->getDataGenerator()->create_user([
-                        'department' => $key,
+                    $supportusers[$dept][] = $this->getDataGenerator()->create_user([
+                        'department' => $dept,
+                        'institution' => $institution,
                         'email' => $supportaccount . $x . $counter . '@solent.ac.uk',
+                        'username' => $supportaccount . $x . $counter,
                     ]);
                 }
                 // User with invalid email address for inclusion.
-                $supportusers[$key][] = $this->getDataGenerator()->create_user([
-                    'department' => $key,
+                $supportusers[$dept][] = $this->getDataGenerator()->create_user([
+                    'department' => $dept,
+                    'institution' => $institution,
                     'email' => 'other' . $x . $counter . '@example.com',
+                    'username' => 'other' . $x . $counter,
                 ]);
                 $counter++;
             }
         }
+
+        // Create the institute cohorts, but don't add anyone. Leave that for the task.
+        foreach ($instcohorts as $instcohort) {
+            $key = 'inst_' . helper::slugify($instcohort);
+            $systemcohorts[$key] = $this->getDataGenerator()->create_cohort([
+                'name' => $instcohort,
+                'idnumber' => $key,
+                'contextid' => $systemcontext->id,
+            ]);
+        }
+        $systemcohorts['all-staff'] = $this->getDataGenerator()->create_cohort([
+            'name' => 'All Staff',
+            'idnumber' => 'all-staff',
+            'contextid' => $systemcontext->id,
+        ]);
+
         foreach ($systemcohorts as $key => $cohort) {
             $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
-            $this->assertCount(10, $premembers);
-            foreach ($cohortusers[$key]['activemembers'] as $member) {
-                $this->assertTrue(cohort_is_member($cohort->id, $member->id));
-            }
-            // Not yet removed.
-            foreach ($cohortusers[$key]['suspendedmembers'] as $member) {
-                $this->assertTrue(cohort_is_member($cohort->id, $member->id));
-            }
-            // Not yet added.
-            foreach ($cohortusers[$key]['newmembers'] as $member) {
-                $this->assertFalse(cohort_is_member($cohort->id, $member->id));
+            $type = explode('_', $cohort->idnumber)[0];
+            if ($type == 'inst') {
+                $type = 'institution';
+            } else if ($cohort->idnumber != 'all-staff') {
+                $type = 'department';
             }
 
-            // Function under test.
-            helper::update_user_department_cohort($cohort->id);
+            if ($type == 'institution') {
+                $this->assertCount(0, $premembers);
+            } else if ($cohort->idnumber == 'all-staff') {
+                $this->assertCount(0, $premembers);
+            } else {
+                $this->assertCount(10, $premembers);
+                foreach ($cohortusers[$key]['activemembers'] as $member) {
+                    $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+                }
+                // Not yet removed.
+                foreach ($cohortusers[$key]['suspendedmembers'] as $member) {
+                    $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+                }
+                // Not yet added.
+                foreach ($cohortusers[$key]['newmembers'] as $member) {
+                    $this->assertFalse(cohort_is_member($cohort->id, $member->id));
+                }
+            }
+
+            // Function under test - this is going to add institution data.
+            if ($cohort->idnumber == 'all-staff') {
+                helper::update_all_staff_cohort();
+            } else {
+                helper::update_user_department_cohort($cohort->id, $type);
+            }
 
             $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
-            $this->assertCount(10, $postmembers);
-            foreach ($cohortusers[$key]['activemembers'] as $member) {
-                $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+            if ($type == 'institution') {
+                $this->assertCount(6, $postmembers);
+            } else if ($cohort->idnumber == 'all-staff') {
+                $this->assertCount(30, $postmembers);
+            } else {
+                $this->assertCount(10, $postmembers);
+                foreach ($cohortusers[$key]['activemembers'] as $member) {
+                    $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+                }
+                foreach ($cohortusers[$key]['newmembers'] as $member) {
+                    $this->assertTrue(cohort_is_member($cohort->id, $member->id));
+                }
+                foreach ($cohortusers[$key]['suspendedmembers'] as $member) {
+                    $this->assertFalse(cohort_is_member($cohort->id, $member->id));
+                }
+                foreach ($supportusers[$key] as $supportuser) {
+                    $this->assertFalse(cohort_is_member($cohort->id, $supportuser->id));
+                }
             }
-            foreach ($cohortusers[$key]['newmembers'] as $member) {
-                $this->assertTrue(cohort_is_member($cohort->id, $member->id));
-            }
-            foreach ($cohortusers[$key]['suspendedmembers'] as $member) {
-                $this->assertFalse(cohort_is_member($cohort->id, $member->id));
-            }
-            foreach ($supportusers[$key] as $supportuser) {
-                $this->assertFalse(cohort_is_member($cohort->id, $supportuser->id));
-            }
+            $this->expectOutputRegex("/Added.*?academic/");
         }
     }
 
@@ -149,7 +220,8 @@ class helper_test extends \advanced_testcase {
         // This will trigger the user_created event.
         $before['user']['auth'] = 'ldap';
         $user = $this->getDataGenerator()->create_user($before['user']);
-        $systemcohorts = $DB->get_records_sql("SELECT idnumber, id, name FROM {cohort} WHERE contextid=:contextid", ['contextid' => $systemcontext->id]);
+        $systemcohorts = $DB->get_records_sql("SELECT idnumber, id, name
+            FROM {cohort} WHERE contextid=:contextid", ['contextid' => $systemcontext->id]);
         foreach ($systemcohorts as $idnumber => $cohort) {
             $ismember = cohort_is_member($cohort->id, $user->id);
             if (in_array($idnumber, $before['ismember'])) {

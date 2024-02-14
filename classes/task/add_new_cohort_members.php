@@ -73,7 +73,8 @@ class add_new_cohort_members extends \core\task\scheduled_task {
             }
             helper::update_user_department_cohort($cohortid);
         }
-        $institutions = $DB->get_records_sql("SELECT DISTINCT(institution) as insitution FROM {user} WHERE deleted = 0 AND suspended = 0");
+        $institutions = $DB->get_records_sql("SELECT DISTINCT(institution) as insitution
+            FROM {user} WHERE deleted = 0 AND suspended = 0");
         foreach ($institutions as $id => $institution) {
             if (empty(trim($institution->institution))) {
                 continue;

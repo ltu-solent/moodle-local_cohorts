@@ -199,7 +199,8 @@ class helper {
         $select = "deleted = 0 AND suspended = 0
             AND (department {$indept})
             {$emailnotlike}
-            AND {$solentlike}";
+            AND {$solentlike}
+            AND auth='ldap'";
         $params['solent'] = '%@solent.ac.uk';
         foreach ($excludeemails as $email) {
             $params[$email . 'email'] = $email . '%';
@@ -271,7 +272,7 @@ class helper {
             $excludeemails = explode(',', $emailexcludepattern);
         }
         foreach ($excludeemails as $excludeemail) {
-            // This user shouldn't be in any of these cohorts.
+            // This user shouldn't be in any of these cohorts. This is checking if the email startswith the pattern.
             if (strpos($user->email, $excludeemail) === 0) {
                 $drop = true;
             }

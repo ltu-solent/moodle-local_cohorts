@@ -76,6 +76,7 @@ class helper_test extends \advanced_testcase {
                 }
                 // Preexisting cohort member.
                 $user = $this->getDataGenerator()->create_user([
+                    'auth' => 'ldap',
                     'department' => $dept,
                     'institution' => $institution,
                     'email' => 'preuser' . $x . $counter . '@solent.ac.uk',
@@ -86,6 +87,7 @@ class helper_test extends \advanced_testcase {
 
                 // Member to be added by function.
                 $user = $this->getDataGenerator()->create_user([
+                    'auth' => 'ldap',
                     'department' => $dept,
                     'institution' => $institution,
                     'email' => 'postuser' . $x . $counter . '@solent.ac.uk',
@@ -95,6 +97,7 @@ class helper_test extends \advanced_testcase {
 
                 // Suspended member who will be removed.
                 $user = $this->getDataGenerator()->create_user([
+                    'auth' => 'ldap',
                     'department' => $dept,
                     'institution' => $institution,
                     'suspended' => 1,
@@ -107,6 +110,7 @@ class helper_test extends \advanced_testcase {
                 // Some support accounts that shouldn't be added.
                 foreach ($supportaccounts as $supportaccount) {
                     $supportusers[$dept][] = $this->getDataGenerator()->create_user([
+                        'auth' => 'ldap',
                         'department' => $dept,
                         'institution' => $institution,
                         'email' => $supportaccount . $x . $counter . '@solent.ac.uk',
@@ -115,6 +119,7 @@ class helper_test extends \advanced_testcase {
                 }
                 // User with invalid email address for inclusion.
                 $supportusers[$dept][] = $this->getDataGenerator()->create_user([
+                    'auth' => 'ldap',
                     'department' => $dept,
                     'institution' => $institution,
                     'email' => 'other' . $x . $counter . '@example.com',

@@ -84,10 +84,10 @@ class helper {
      * Update members for given cohort.
      *
      * @param int $cohortid
-     * @param string $field User field to check
+     * @param string $field User profile field to check
      * @return void
      */
-    public static function update_user_department_cohort(int $cohortid, string $field = 'department') {
+    public static function update_user_profile_cohort(int $cohortid, string $field = 'department') {
         global $DB;
         $config = get_config('local_cohorts');
         $cohort = $DB->get_record('cohort', ['id' => $cohortid]);
@@ -230,12 +230,12 @@ class helper {
     }
 
     /**
-     * Update cohort enrolment for a user based on their department field.
+     * Update cohort enrolment for a user based on their department and institution field.
      *
      * @param int $userid
      * @return void
      */
-    public static function sync_user_department(int $userid) {
+    public static function sync_user_profile_cohort(int $userid) {
         global $DB;
         $config = get_config('local_cohorts');
         $user = core_user::get_user($userid);

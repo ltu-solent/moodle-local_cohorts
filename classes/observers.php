@@ -35,7 +35,7 @@ class observers {
     public static function user_updated(\core\event\user_updated $event) {
         // This event is only triggered by auth_ldap if there's a real change, otherwise it's "skipped".
         $userid = $event->objectid;
-        helper::sync_user_department($userid);
+        helper::sync_user_profile_cohort($userid);
     }
 
     /**
@@ -46,6 +46,6 @@ class observers {
      */
     public static function user_created(\core\event\user_created $event) {
         $userid = $event->objectid;
-        helper::sync_user_department($userid);
+        helper::sync_user_profile_cohort($userid);
     }
 }

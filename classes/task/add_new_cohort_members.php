@@ -71,7 +71,7 @@ class add_new_cohort_members extends \core\task\scheduled_task {
                 $cohort->contextid = $context->id;
                 $cohortid = cohort_add_cohort($cohort);
             }
-            helper::update_user_department_cohort($cohortid);
+            helper::update_user_profile_cohort($cohortid);
         }
         $institutions = $DB->get_records_sql("SELECT DISTINCT(institution) as insitution
             FROM {user} WHERE deleted = 0 AND suspended = 0");
@@ -89,7 +89,7 @@ class add_new_cohort_members extends \core\task\scheduled_task {
                 $cohort->contextid = $context->id;
                 $cohortid = cohort_add_cohort($cohort);
             }
-            helper::update_user_department_cohort($cohortid, 'institution');
+            helper::update_user_profile_cohort($cohortid, 'institution');
         }
         student6();
     }

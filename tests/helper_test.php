@@ -176,7 +176,7 @@ class helper_test extends \advanced_testcase {
             if ($cohort->idnumber == 'all-staff') {
                 helper::update_all_staff_cohort();
             } else {
-                helper::update_user_department_cohort($cohort->id, $type);
+                helper::update_user_profile_cohort($cohort->id, $type);
             }
 
             $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);

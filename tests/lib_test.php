@@ -349,8 +349,13 @@ class lib_test extends advanced_testcase {
             cohort_add_member($cohort->id, $sixmonthsplus[$x]->id);
             $withinsixmonths[] = $this->getDataGenerator()->create_user([
                 'department' => 'student',
+                'auth' => 'ldap',
             ]);
             $otherusers[] = $this->getDataGenerator()->create_user();
+            $otherusers[] = $this->getDataGenerator()->create_user([
+                'department' => 'student',
+                'auth' => 'manual',
+            ]);
         }
         $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
         foreach ($premembers as $member) {

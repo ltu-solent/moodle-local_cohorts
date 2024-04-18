@@ -14,9 +14,11 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_cohorts;
+namespace local_cohorts\task;
 
 use context_system;
+use Exception;
+use local_cohorts\helper;
 
 /**
  * Tests for SOL Cohorts
@@ -27,214 +29,38 @@ use context_system;
  * @author Mark Sharp <mark.sharp@solent.ac.uk>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class helper_test extends \advanced_testcase {
+final class add_new_cohort_members_test extends \advanced_testcase {
     /**
-     * Update user department cohort memberships
-     * @covers \local_cohorts\helper::update_user_department_cohort
+     * Test task execute
      *
+     * @covers \local_cohorts\tasks\add_new_cohort_members::execute
+     * @dataProvider execute_provider
      * @return void
      */
-    public function test_update_user_department_cohort() {
+    public function test_execute($before, $after, $expectedoutput) {
         global $DB;
         $this->resetAfterTest();
         $systemcontext = context_system::instance();
         // I don't want events to trigger for this test.
         $sink = $this->redirectEvents();
-        // Create users for each department.
-        $supportaccounts = ['academic', 'consultant', 'jobshop'];
-        set_config('staffcohorts', 'academic,management,support', 'local_cohorts');
-        set_config('emailexcludepattern', join(',', $supportaccounts), 'local_cohorts');
-        $cohortusers = [];
-        $counter = 0;
-        $supportusers = [];
-        $systemcohorts = [];
-
-        $deptcohorts = ['academic', 'management', 'support', 'student'];
-        $instcohorts = [
-            'Warshash Maritime School',
-            'Information & Communications Technology',
-            'Arts and Music',
-            'Social Sciences and Nursing',
-            'Science and Engineering',
-        ];
-
-        foreach ($deptcohorts as $dept) {
-            if (!$DB->record_exists('cohort', ['idnumber' => $dept, 'contextid' => $systemcontext->id])) {
-                $systemcohorts[$dept] = $this->getDataGenerator()->create_cohort([
-                    'name' => ucwords($dept),
-                    'idnumber' => $dept,
-                    'contextid' => $systemcontext->id,
-                    'component' => 'local_cohorts',
-                ]);
-            }
-            $cohort = $systemcohorts[$dept];
-
-            for ($x = 0; $x < 5; $x++) {
-                $institution = $instcohorts[$x];
-                // Students don't get the institution field filled.
-                if ($dept == 'student') {
-                    $institution = '';
-                }
-                // Preexisting cohort member.
-                $user = $this->getDataGenerator()->create_user([
-                    'auth' => 'ldap',
-                    'department' => $dept,
-                    'institution' => $institution,
-                    'email' => 'preuser' . $x . $counter . '@solent.ac.uk',
-                    'username' => 'preuser' . $x . $counter,
-                ]);
-                cohort_add_member($cohort->id, $user->id);
-                $cohortusers[$dept]['activemembers'][] = $user;
-
-                // Member to be added by function.
-                $user = $this->getDataGenerator()->create_user([
-                    'auth' => 'ldap',
-                    'department' => $dept,
-                    'institution' => $institution,
-                    'email' => 'postuser' . $x . $counter . '@solent.ac.uk',
-                    'username' => 'postuser' . $x . $counter,
-                ]);
-                $cohortusers[$dept]['newmembers'][] = $user;
-
-                // Suspended member who will be removed.
-                $user = $this->getDataGenerator()->create_user([
-                    'auth' => 'ldap',
-                    'department' => $dept,
-                    'institution' => $institution,
-                    'suspended' => 1,
-                    'email' => 'usersuspended' . $x . $counter . '@solent.ac.uk',
-                    'username' => 'usersuspended' . $x . $counter,
-                ]);
-                cohort_add_member($cohort->id, $user->id);
-                $cohortusers[$dept]['suspendedmembers'][] = $user;
-
-                // Some support accounts that shouldn't be added.
-                foreach ($supportaccounts as $supportaccount) {
-                    $supportusers[$dept][] = $this->getDataGenerator()->create_user([
-                        'auth' => 'ldap',
-                        'department' => $dept,
-                        'institution' => $institution,
-                        'email' => $supportaccount . $x . $counter . '@solent.ac.uk',
-                        'username' => $supportaccount . $x . $counter,
-                    ]);
-                }
-                // User with invalid email address for inclusion.
-                $supportusers[$dept][] = $this->getDataGenerator()->create_user([
-                    'auth' => 'ldap',
-                    'department' => $dept,
-                    'institution' => $institution,
-                    'email' => 'other' . $x . $counter . '@example.com',
-                    'username' => 'other' . $x . $counter,
-                ]);
-                $counter++;
-            }
-        }
-
-        // Create the institute cohorts, but don't add anyone. Leave that for the task.
-        foreach ($instcohorts as $instcohort) {
-            $key = 'inst_' . helper::slugify($instcohort);
-            $systemcohorts[$key] = $this->getDataGenerator()->create_cohort([
-                'name' => $instcohort,
-                'idnumber' => $key,
-                'contextid' => $systemcontext->id,
-                'component' => 'local_cohorts',
-            ]);
-        }
-        $systemcohorts['all-staff'] = $this->getDataGenerator()->create_cohort([
-            'name' => 'All Staff',
-            'idnumber' => 'all-staff',
-            'contextid' => $systemcontext->id,
-            'component' => 'local_cohorts',
-        ]);
-
-        foreach ($systemcohorts as $key => $cohort) {
-            $premembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
-            $type = explode('_', $cohort->idnumber)[0];
-            if ($type == 'inst') {
-                $type = 'institution';
-            } else if ($cohort->idnumber != 'all-staff') {
-                $type = 'department';
-            }
-
-            if ($type == 'institution') {
-                $this->assertCount(0, $premembers);
-            } else if ($cohort->idnumber == 'all-staff') {
-                $this->assertCount(0, $premembers);
-            } else {
-                $this->assertCount(10, $premembers);
-                foreach ($cohortusers[$key]['activemembers'] as $member) {
-                    $this->assertTrue(cohort_is_member($cohort->id, $member->id));
-                }
-                // Not yet removed.
-                foreach ($cohortusers[$key]['suspendedmembers'] as $member) {
-                    $this->assertTrue(cohort_is_member($cohort->id, $member->id));
-                }
-                // Not yet added.
-                foreach ($cohortusers[$key]['newmembers'] as $member) {
-                    $this->assertFalse(cohort_is_member($cohort->id, $member->id));
-                }
-            }
-
-            // Function under test - this is going to add institution data.
-            if ($cohort->idnumber == 'all-staff') {
-                helper::update_all_staff_cohort();
-            } else {
-                helper::update_user_profile_cohort($cohort->id, $type);
-            }
-
-            $postmembers = $DB->get_records('cohort_members', ['cohortid' => $cohort->id]);
-            if ($type == 'institution') {
-                $this->assertCount(6, $postmembers);
-            } else if ($cohort->idnumber == 'all-staff') {
-                $this->assertCount(30, $postmembers);
-            } else {
-                $this->assertCount(10, $postmembers);
-                foreach ($cohortusers[$key]['activemembers'] as $member) {
-                    $this->assertTrue(cohort_is_member($cohort->id, $member->id));
-                }
-                foreach ($cohortusers[$key]['newmembers'] as $member) {
-                    $this->assertTrue(cohort_is_member($cohort->id, $member->id));
-                }
-                foreach ($cohortusers[$key]['suspendedmembers'] as $member) {
-                    $this->assertFalse(cohort_is_member($cohort->id, $member->id));
-                }
-                foreach ($supportusers[$key] as $supportuser) {
-                    $this->assertFalse(cohort_is_member($cohort->id, $supportuser->id));
-                }
-            }
-            $this->expectOutputRegex("/Added.*?academic/");
-        }
-    }
-
-    /**
-     * Tests the sync_user_profile_cohort function via user events
-     *
-     * @param array $before Conditions before update
-     * @param array $after Conditions after update
-     * @dataProvider sync_user_profile_cohort_provider
-     * @covers \local_cohorts\helper::sync_user_profile_cohort
-     * @covers \local_cohorts\observers::user_updated
-     * @covers \local_cohorts\observers::user_created
-     * @return void
-     */
-    public function test_sync_user_profile_cohort($before, $after) {
-        global $DB;
-        $this->resetAfterTest();
-        $systemcontext = context_system::instance();
         $supportaccounts = ['academic', 'consultant', 'jobshop'];
         set_config('staffcohorts', 'academic,management,support', 'local_cohorts');
         set_config('emailexcludepattern', join(',', $supportaccounts), 'local_cohorts');
         // Set up the cohorts.
         $deptcohorts = ['academic', 'management', 'support', 'student'];
-        // I've deliberately left out Warsash, as this will be dynamically created.
         $instcohorts = [
+            'Warsash Maritime School',
             'Information & Communications Technology',
             'Arts and Music',
             'Social Sciences and Nursing',
             'Science and Engineering',
         ];
         foreach ($deptcohorts as $dept) {
-            if (!$DB->record_exists('cohort', ['idnumber' => $dept, 'contextid' => $systemcontext->id])) {
+            if (!$DB->record_exists('cohort', [
+                    'idnumber' => $dept,
+                    'contextid' => $systemcontext->id,
+                    'component' => 'local_cohorts',
+                ])) {
                 $this->getDataGenerator()->create_cohort([
                     'name' => ucwords($dept),
                     'idnumber' => $dept,
@@ -264,13 +90,15 @@ class helper_test extends \advanced_testcase {
             'contextid' => $systemcontext->id,
             'component' => 'local_cohorts',
         ]);
-        // This will trigger the user_created event.
+        // I've put the events into a sink, so we can execute the task.
         $user = $this->getDataGenerator()->create_user($before['user']);
+        $task = new add_new_cohort_members();
+        $task->execute();
         $systemcohorts = $DB->get_records('cohort', [
             'contextid' => $systemcontext->id,
             'component' => 'local_cohorts',
         ]);
-
+        // The user should only be a member of cohorts listed.
         foreach ($systemcohorts as $cohort) {
             $ismember = cohort_is_member($cohort->id, $user->id);
             if (in_array($cohort->idnumber, $before['ismember'])) {
@@ -290,12 +118,14 @@ class helper_test extends \advanced_testcase {
         }
 
         if ($deleteme) {
-            // Delete deletes all cohort memberships without needing events.
+            // Delete deletes all cohort memberships without needing the task.
             user_delete_user($user);
         } else {
-            // This will trigger the user_updated event.
+            // I've put the events into a sink, so we can execute the task.
             user_update_user($user, false);
         }
+
+        $task->execute();
 
         $systemcohorts = $DB->get_records('cohort', [
             'contextid' => $systemcontext->id,
@@ -309,14 +139,15 @@ class helper_test extends \advanced_testcase {
                 $this->assertFalse($ismember);
             }
         }
+        $this->expectOutputString($expectedoutput);
     }
 
     /**
-     * Provider for test_sync_user_profile_cohort
+     * Provider for test_execute
      *
      * @return array
      */
-    public static function sync_user_profile_cohort_provider(): array {
+    public static function execute_provider(): array {
         return [
             'academic-warsash' => [
                 'before' => [
@@ -345,6 +176,10 @@ class helper_test extends \advanced_testcase {
                         'inst_warsash-maritime-school',
                     ],
                 ],
+                'expected' => "Added teacherj academic  to Academic (academic)\n" .
+                              "Added teacherj academic  to All Staff (all-staff)\n" .
+                              "Added teacherj academic Warsash Maritime School to " .
+                                "Warsash Maritime School (inst_warsash-maritime-school)\n",
             ],
             // No manual accounts are added to cohorts.
             'manual-academic-warsash' => [
@@ -368,6 +203,7 @@ class helper_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
+                'expected' => '',
             ],
             // Any username with academic in it isn't included.
             'consultant-ee-account-with-named-email' => [
@@ -389,6 +225,7 @@ class helper_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
+                'expected' => '',
             ],
             // Any email with academic in it isn't included.
             'consultant-ee-account' => [
@@ -410,6 +247,7 @@ class helper_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
+                'expected' => '',
             ],
             'solent_academic_suspended' => [
                 'before' => [
@@ -427,6 +265,10 @@ class helper_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
+                'expected' => "Added username1 academic  to Academic (academic)\n" .
+                              "Added username1 academic  to All Staff (all-staff)\n" .
+                              "Removed username1 from Academic (academic)\n" .
+                              "Removed username1 from All Staff (all-staff)\n",
             ],
             'solent_academic_suspended_to_active' => [
                 'before' => [
@@ -445,6 +287,8 @@ class helper_test extends \advanced_testcase {
                     ],
                     'ismember' => ['academic', 'all-staff'],
                 ],
+                'expected' => "Added username1 academic  to Academic (academic)\n" .
+                              "Added username1 academic  to All Staff (all-staff)\n",
             ],
             'solent_academic_deleted' => [
                 'before' => [
@@ -462,6 +306,8 @@ class helper_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
+                'expected' => "Added username1 academic  to Academic (academic)\n" .
+                              "Added username1 academic  to All Staff (all-staff)\n",
             ],
             'support_jobshop' => [
                 'before' => [
@@ -477,6 +323,7 @@ class helper_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
+                'expected' => '',
             ],
             'support_consultant' => [
                 'before' => [
@@ -492,6 +339,7 @@ class helper_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
+                'expected' => '',
             ],
             // External email addresses aren't included.
             'external-email-even-with-ldap' => [
@@ -509,6 +357,7 @@ class helper_test extends \advanced_testcase {
                     'user' => [],
                     'ismember' => [],
                 ],
+                'expected' => '',
             ],
             'solent_academic_to_support' => [
                 'before' => [
@@ -525,6 +374,10 @@ class helper_test extends \advanced_testcase {
                     ],
                     'ismember' => ['support', 'all-staff'],
                 ],
+                'expected' => "Added username1 academic  to Academic (academic)\n" .
+                              "Added username1 academic  to All Staff (all-staff)\n" .
+                              "Removed username1 from Academic (academic)\n" .
+                              "Added username1 support  to Support (support)\n",
             ],
             'random_dept' => [
                 'before' => [
@@ -539,6 +392,7 @@ class helper_test extends \advanced_testcase {
                     'user' => [],
                     'ismember' => ['random'],
                 ],
+                'expected' => '',
             ],
             'student' => [
                 'before' => [
@@ -547,15 +401,55 @@ class helper_test extends \advanced_testcase {
                         'department' => 'student',
                         'email' => 'smithj1@solent.ac.uk',
                     ],
-                    'ismember' => ['student'],
+                    'ismember' => [
+                        'student',
+                        'student6',
+                    ],
                 ],
                 'after' => [
                     'user' => [],
-                    'ismember' => ['student'],
+                    'ismember' => [
+                        'student',
+                        'student6',
+                    ],
                 ],
+                'expected' => "Added username1 student  to Student (student)\n" .
+                              "username1 added to 'student6' cohort\n",
+            ],
+            'student6-within-6-months' => [
+                'before' => [
+                    'user' => [
+                        'auth' => 'ldap',
+                        'department' => 'student',
+                        'institution' => '',
+                        'email' => 'julie.student@solent.ac.uk',
+                        'username' => '0studentj1',
+                        'timecreated' => strtotime("-5 months"),
+                    ],
+                    'ismember' => [
+                        'student6',
+                        'student',
+                    ],
+                ],
+                'after' => [
+                    'user' => [
+                        'auth' => 'ldap',
+                        'department' => 'student',
+                        'institution' => '',
+                        'email' => 'julie.student@solent.ac.uk',
+                        'username' => '0studentj1',
+                        'timecreated' => strtotime("-7 months"),
+                    ],
+                    'ismember' => [
+                        'student',
+                    ],
+                ],
+                'expected' => "Added 0studentj1 student  to Student (student)\n" .
+                              "0studentj1 added to 'student6' cohort\n" .
+                              "0studentj1 removed from 'student6' cohort\n",
             ],
             // Manual accounts should not be included.
-            'student-manual' => [
+            'student6-manual' => [
                 'before' => [
                     'user' => [
                         'auth' => 'ldap',
@@ -564,7 +458,10 @@ class helper_test extends \advanced_testcase {
                         'email' => 'julie.student@solent.ac.uk',
                         'username' => '0studentj1',
                     ],
-                    'ismember' => ['student'],
+                    'ismember' => [
+                        'student',
+                        'student6',
+                    ],
                 ],
                 'after' => [
                     'user' => [
@@ -576,6 +473,10 @@ class helper_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
+                'expected' => "Added 0studentj1 student  to Student (student)\n" .
+                              "0studentj1 added to 'student6' cohort\n" .
+                              "Removed 0studentj1 from Student (student)\n" .
+                              "0studentj1 removed from 'student6' cohort\n",
             ],
         ];
     }

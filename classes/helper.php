@@ -113,6 +113,7 @@ class helper {
         $excludesql = [];
         foreach ($excludeemails as $email) {
             $excludesql[] = $DB->sql_like('email', ':' . $email . 'email', false, false, true);
+            $excludesql[] = $DB->sql_like('username', ':' . $email . 'username', false, false, true);
         }
 
         $emailnotlike = '';
@@ -123,7 +124,8 @@ class helper {
         $select = "deleted = 0 AND suspended = 0
             AND ({$field} = :department)
             {$emailnotlike}
-            AND {$solentlike}";
+            AND {$solentlike}
+            AND auth = 'ldap'";
         $params = [
             'solent' => '%@solent.ac.uk',
         ];
@@ -134,6 +136,7 @@ class helper {
         }
         foreach ($excludeemails as $email) {
             $params[$email . 'email'] = $email . '%';
+            $params[$email . 'username'] = $email . '%';
         }
 
         $potentialmembers = $DB->get_records_select('user', $select, $params);
@@ -168,7 +171,11 @@ class helper {
         $systemcontext = context_system::instance();
         $config = get_config('local_cohorts');
 
-        $cohort = $DB->get_record('cohort', ['idnumber' => 'all-staff', 'contextid' => $systemcontext->id]);
+        $cohort = $DB->get_record('cohort', [
+            'idnumber' => 'all-staff',
+            'contextid' => $systemcontext->id,
+            'component' => 'local_cohorts',
+        ]);
         if (!$cohort) {
             return;
         }
@@ -188,6 +195,7 @@ class helper {
         $excludesql = [];
         foreach ($excludeemails as $email) {
             $excludesql[] = $DB->sql_like('email', ':' . $email . 'email', false, false, true);
+            $excludesql[] = $DB->sql_like('username', ':' . $email . 'username', false, false, true);
         }
 
         $emailnotlike = '';
@@ -204,6 +212,7 @@ class helper {
         $params['solent'] = '%@solent.ac.uk';
         foreach ($excludeemails as $email) {
             $params[$email . 'email'] = $email . '%';
+            $params[$email . 'username'] = $email . '%';
         }
         $potentialmembers = $DB->get_records_select('user', $select, $params);
 
@@ -239,9 +248,6 @@ class helper {
         global $DB;
         $config = get_config('local_cohorts');
         $user = core_user::get_user($userid);
-        if ($user->auth != 'ldap') {
-            return;
-        }
         $systemcontext = context_system::instance();
         $inparams['userid'] = $userid;
         $inparams['contextid'] = $systemcontext->id;
@@ -249,7 +255,7 @@ class helper {
             SELECT c.id, c.idnumber, c.name
             FROM {cohort} c
             JOIN {cohort_members} cm ON cm.cohortid = c.id AND cm.userid = :userid
-            WHERE c.contextid = :contextid
+            WHERE c.contextid = :contextid AND c.component = 'local_cohorts'
         ", $inparams);
         // If not a member of anything and has no dept or inst, stop here.
         if ((empty(trim($user->department)) && empty(trim($user->institution))) && count($existingmembership) == 0) {
@@ -265,6 +271,10 @@ class helper {
         }
 
         $drop = false;
+        // Only want ldap controlled accounts.
+        if ($user->auth != 'ldap') {
+            $drop = true;
+        }
         // This is checking the username part of the email address for things like "consultant001" which would have a solent domain.
         $emailexcludepattern = $config->emailexcludepattern ?? '';
         $excludeemails = [];
@@ -274,6 +284,10 @@ class helper {
         foreach ($excludeemails as $excludeemail) {
             // This user shouldn't be in any of these cohorts. This is checking if the email startswith the pattern.
             if (strpos($user->email, $excludeemail) === 0) {
+                $drop = true;
+            }
+            // Also check username.
+            if (strpos($user->username, $excludeemail) === 0) {
                 $drop = true;
             }
         }
@@ -317,12 +331,14 @@ class helper {
             $deptcohortid = $DB->get_field('cohort', 'id', [
                 'idnumber' => $user->department,
                 'contextid' => $systemcontext->id,
+                'component' => 'local_cohorts',
             ]);
             if (!$deptcohortid) {
                 $cohort = new stdClass();
                 $cohort->contextid = $systemcontext->id;
                 $cohort->name = ucwords($user->department);
                 $cohort->idnumber = $user->department;
+                $cohort->component = 'local_cohorts';
                 $deptcohortid = cohort_add_cohort($cohort);
             }
             if ($deptcohortid && !cohort_is_member($deptcohortid, $userid)) {
@@ -335,12 +351,14 @@ class helper {
             $instcohortid = $DB->get_field('cohort', 'id', [
                 'idnumber' => $instslug,
                 'contextid' => $systemcontext->id,
+                'component' => 'local_cohorts',
             ]);
             if (!$instcohortid) {
                 $cohort = new stdClass();
                 $cohort->contextid = $systemcontext->id;
                 $cohort->name = $user->institution;
                 $cohort->idnumber = $instslug;
+                $cohort->component = 'local_cohorts';
                 $instcohortid = cohort_add_cohort($cohort);
             }
             if ($instcohortid && !cohort_is_member($instcohortid, $userid)) {
@@ -351,12 +369,14 @@ class helper {
         $staffcohortid = $DB->get_field('cohort', 'id', [
             'idnumber' => 'all-staff',
             'contextid' => $systemcontext->id,
+            'component' => 'local_cohorts',
         ]);
         if (!$staffcohortid) {
             $cohort = new stdClass();
             $cohort->contextid = $systemcontext->id;
             $cohort->name = 'All staff';
             $cohort->idnumber = 'all-staff';
+            $cohort->component = 'local_cohorts';
             $staffcohortid = cohort_add_cohort($cohort);
         }
         if ($isstaff && !cohort_is_member($staffcohortid, $userid)) {

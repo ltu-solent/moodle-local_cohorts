@@ -195,7 +195,7 @@ function student6() {
     $sql = "SELECT *
             FROM {user}
             WHERE (timecreated > :sixmonthsago
-            AND  deleted = 0 AND suspended = 0 AND department = 'student')";
+            AND deleted = 0 AND suspended = 0 AND department = 'student') AND auth = 'ldap'";
     $params = ['sixmonthsago' => $sixmonthsago];
     $resultusersall = $DB->get_records_sql($sql, $params);
 
@@ -212,7 +212,7 @@ function student6() {
             JOIN {cohort} c ON c.id = cm.cohortid
             WHERE c.idnumber = :cohortidnumber
             AND (u.timecreated < :sixmonthsago
-            OR (suspended = 1 OR deleted = 1 OR department != 'student'))");
+            OR (suspended = 1 OR deleted = 1 OR department != 'student' OR auth != 'ldap'))");
     $params = ['cohortidnumber' => 'student6', 'sixmonthsago' => $sixmonthsago];
     $cohortmembers = $DB->get_records_sql($sql, $params);
 

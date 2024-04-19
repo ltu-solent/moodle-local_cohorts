@@ -337,7 +337,7 @@ class helper {
                 $cohort = new stdClass();
                 $cohort->contextid = $systemcontext->id;
                 $cohort->name = ucwords($user->department);
-                $cohort->idnumber = $user->department;
+                $cohort->idnumber = strtolower($user->department);
                 $cohort->component = 'local_cohorts';
                 $deptcohortid = cohort_add_cohort($cohort);
             }
@@ -382,6 +382,92 @@ class helper {
         if ($isstaff && !cohort_is_member($staffcohortid, $userid)) {
             cohort_add_member($staffcohortid, $userid);
         }
+    }
+
+    /**
+     * Migrate any existing system cohorts, and expand with new ones based on user profile fields.
+     *
+     * @return void
+     */
+    public static function migrate_cohorts() {
+        global $DB;
+        $context = context_system::instance();
+        $cohorts = $DB->get_records('cohort', [
+            'contextid' => $context->id,
+            'component' => '',
+        ]);
+        foreach ($cohorts as $cohort) {
+            self::adopt_a_cohort($cohort->id);
+        }
+        // Create new cohorts based on user department and institution fields.
+        $depts = $DB->get_records_sql("SELECT DISTINCT(department)
+            FROM {user}
+            WHERE department != '' AND suspended = 0 AND deleted = 0");
+        foreach ($depts as $dept) {
+            $exists = $DB->record_exists('cohort', [
+                'idnumber' => strtolower($dept->department),
+                'contextid' => $context->id,
+                'component' => 'local_cohorts',
+            ]);
+            if (!$exists) {
+                $newcohort = new stdClass();
+                $newcohort->name = ucwords($dept->department);
+                $newcohort->idnumber = strtolower($dept->department);
+                $newcohort->contextid = $context->id;
+                $newcohort->component = 'local_cohorts';
+                cohort_add_cohort($newcohort);
+            }
+        }
+        $insts = $DB->get_records_sql("SELECT DISTINCT(institution)
+            FROM {user}
+            WHERE institution != '' AND suspended = 0 AND deleted = 0");
+        foreach ($insts as $inst) {
+            $exists = $DB->record_exists('cohort', [
+                'idnumber' => 'inst_' . self::slugify($inst->institution),
+                'contextid' => $context->id,
+                'component' => 'local_cohorts',
+            ]);
+            if (!$exists) {
+                $newcohort = new stdClass();
+                $newcohort->name = ucwords($inst->institution);
+                $newcohort->idnumber = 'inst_' . self::slugify($inst->institution);
+                $newcohort->contextid = $context->id;
+                $newcohort->component = 'local_cohorts';
+                cohort_add_cohort($newcohort);
+            }
+        }
+    }
+
+    /**
+     * Adopt an existing system cohort
+     *
+     * @param int $cohortid
+     * @return bool
+     */
+    public static function adopt_a_cohort($cohortid): bool {
+        global $DB;
+        $cohort = $DB->get_record('cohort', ['id' => $cohortid]);
+        $systemcontext = context_system::instance();
+        if ($cohort->contextid != $systemcontext->id) {
+            // Only interested in system cohorts, for now.
+            return false;
+        }
+        if ($cohort->component != '') {
+            // Already owned by another plugin.
+            return false;
+        }
+        if ($cohort->idnumber == '') {
+            // No idnumber, not one we want to track.
+            return false;
+        }
+        if (strpos($cohort->description, 'Auto populated') === false) {
+            // Only add ones marked Auto populated in the description.
+            return false;
+        }
+        $cohort->idnumber = strtolower($cohort->idnumber);
+        $cohort->component = 'local_cohorts';
+        $cohort->timemodified = time();
+        return $DB->update_record('cohort', $cohort);
     }
 
     /**

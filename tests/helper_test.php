@@ -16,6 +16,7 @@
 
 namespace local_cohorts;
 
+use context_coursecat;
 use context_system;
 
 /**
@@ -578,5 +579,144 @@ class helper_test extends \advanced_testcase {
                 ],
             ],
         ];
+    }
+
+    /**
+     * Test adopt_a_cohort
+     * @covers \local_cohort\helper::adopt_a_cohort
+     *
+     * @return void
+     */
+    public function test_adopt_a_cohort() {
+        $this->resetAfterTest();
+        $systemcontext = context_system::instance();
+        $cohorts = [];
+        $cohorts['system'] = $this->getDataGenerator()->create_cohort([
+            'description' => 'Something something Auto populated something something',
+            'idnumber' => 'system-cohort',
+            'contextid' => $systemcontext->id,
+        ]);
+        $cohorts['noidnumber'] = $this->getDataGenerator()->create_cohort([
+            'name' => 'No Idnumber',
+            'idnumber' => '',
+            'contextid' => $systemcontext->id,
+        ]);
+        $cohorts['manually'] = $this->getDataGenerator()->create_cohort([
+            'name' => 'Manually',
+            'idnumber' => 'manually',
+            'description' => 'Manually populated',
+            'contextid' => $systemcontext->id,
+        ]);
+        $cohorts['auto'] = $this->getDataGenerator()->create_cohort([
+            'name' => 'Auto populated',
+            'idnumber' => 'auto',
+            'description' => 'Auto populated',
+            'contextid' => $systemcontext->id,
+        ]);
+        $cohorts['system-owned'] = $this->getDataGenerator()->create_cohort([
+            'idnumber' => 'system-owned',
+            'contextid' => $systemcontext->id,
+            'component' => 'local_something',
+        ]);
+        $cat = $this->getDataGenerator()->create_category();
+        $catccontext = context_coursecat::instance($cat->id);
+        $cohorts['cat'] = $this->getDataGenerator()->create_cohort([
+            'idnumber' => 'cat',
+            'contextid' => $catccontext->id,
+        ]);
+        $this->assertTrue(helper::adopt_a_cohort($cohorts['system']->id));
+        $this->assertFalse(helper::adopt_a_cohort($cohorts['noidnumber']->id));
+        $this->assertFalse(helper::adopt_a_cohort($cohorts['manually']->id));
+        $this->assertTrue(helper::adopt_a_cohort($cohorts['auto']->id));
+        $this->assertFalse(helper::adopt_a_cohort($cohorts['system-owned']->id));
+        $this->assertFalse(helper::adopt_a_cohort($cohorts['cat']->id));
+    }
+
+    /**
+     * Test migrate cohorts
+     * @covers \local_cohorts\helper::migrate_cohorts
+     *
+     * @return void
+     */
+    public function test_migrate_cohorts() {
+        global $DB;
+        $this->resetAfterTest();
+        // I don't want events to trigger for this test.
+        $sink = $this->redirectEvents();
+        $systemcontext = context_system::instance();
+        $cohorts = [];
+        // No migration: Incorrect description.
+        $cohorts['system'] = $this->getDataGenerator()->create_cohort([
+            'name' => 'System cohorts',
+            'idnumber' => 'system-cohort',
+            'contextid' => $systemcontext->id,
+        ]);
+        // Yes migration: Auto populated in description and not owned by another plugin.
+        $cohorts['system-description'] = $this->getDataGenerator()->create_cohort([
+            'description' => 'Something something Auto populated something something',
+            'idnumber' => 'system-cohort',
+            'contextid' => $systemcontext->id,
+        ]);
+        // No migration: No idnumber.
+        $cohorts['noidnumber'] = $this->getDataGenerator()->create_cohort([
+            'name' => 'No Idnumber',
+            'idnumber' => '',
+            'contextid' => $systemcontext->id,
+        ]);
+        // No migration: No Auto populated in description.
+        $cohorts['manually'] = $this->getDataGenerator()->create_cohort([
+            'name' => 'Manually',
+            'idnumber' => 'manually',
+            'description' => 'Manually populated',
+            'contextid' => $systemcontext->id,
+        ]);
+        // Yes migration: Auto populated in description.
+        $cohorts['auto'] = $this->getDataGenerator()->create_cohort([
+            'name' => 'Auto populated',
+            'idnumber' => 'auto',
+            'description' => 'Auto populated',
+            'contextid' => $systemcontext->id,
+        ]);
+        $migrated = $DB->get_records('cohort', [
+            'contextid' => $systemcontext->id,
+            'component' => 'local_cohorts',
+        ]);
+        $this->assertCount(0, $migrated);
+
+        helper::migrate_cohorts();
+        $migrated = $DB->get_records('cohort', [
+            'contextid' => $systemcontext->id,
+            'component' => 'local_cohorts',
+        ]);
+        $this->assertCount(2, $migrated);
+
+        // Duplicate to ensure each cohort is only created once.
+        $this->getDataGenerator()->create_user(['department' => 'Academic', 'institution' => 'Warsash Maritime School']);
+        $this->getDataGenerator()->create_user(['department' => 'Academic', 'institution' => 'Warsash Maritime School']);
+        helper::migrate_cohorts();
+        $migrated = $DB->get_records('cohort', [
+            'contextid' => $systemcontext->id,
+            'component' => 'local_cohorts',
+        ]);
+        $this->assertCount(4, $migrated);
+
+        $this->getDataGenerator()->create_user([
+            'department' => 'support',
+            'institution' => 'Information & Communications Technology',
+        ]);
+        helper::migrate_cohorts();
+        $migrated = $DB->get_records('cohort', [
+            'contextid' => $systemcontext->id,
+            'component' => 'local_cohorts',
+        ]);
+        $this->assertCount(6, $migrated);
+
+        $this->getDataGenerator()->create_user(['department' => 'Management', 'institution' => 'Solent Students\' Union']);
+        helper::migrate_cohorts();
+        $migrated = $DB->get_records('cohort', [
+            'contextid' => $systemcontext->id,
+            'component' => 'local_cohorts',
+        ]);
+        $this->assertCount(8, $migrated);
     }
 }

@@ -34,10 +34,9 @@ use local_cohorts\helper;
  * @return bool
  */
 function xmldb_local_cohorts_upgrade($oldversion) {
-    global $DB;
-    $dbman = $DB->get_manager();
-    // if ($oldversion < 2024041900) {
-    //     // helper::migrate_cohorts();
-    // }
+    if ($oldversion < 2024041901) {
+        helper::migrate_cohorts();
+        upgrade_plugin_savepoint(true, '2024041901', 'local', 'cohorts');
+    }
     return true;
 }

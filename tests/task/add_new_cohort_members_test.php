@@ -35,6 +35,9 @@ final class add_new_cohort_members_test extends \advanced_testcase {
      *
      * @covers \local_cohorts\tasks\add_new_cohort_members::execute
      * @dataProvider execute_provider
+     * @param array $before User status before running task
+     * @param array $after User status after running task
+     * @param string $expectedoutput from the task
      * @return void
      */
     public function test_execute($before, $after, $expectedoutput) {

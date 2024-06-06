@@ -67,7 +67,7 @@ class location_cohort_sync extends scheduled_task {
         $studentroleid = $DB->get_field('role', 'id', ['shortname' => 'student']);
 
         // Get all possible locations.
-        $sql = "SELECT DISTINCT(cfd.value) location
+        $sql = "SELECT DISTINCT(cfd.value) loc
             FROM {customfield_data} cfd
             WHERE cfd.fieldid = (SELECT id FROM {customfield_field} WHERE shortname = 'location')
                 AND cfd.value != ''";
@@ -75,9 +75,9 @@ class location_cohort_sync extends scheduled_task {
         $systemcontext = context_system::instance();
 
         foreach ($locations as $location) {
-            mtrace("Start processing for \"{$location->location}\" cohort");
+            mtrace("Start processing for \"{$location->loc}\" cohort");
             // Idnumber max length 100 loc_ and _stu is 8 chars.
-            $locationslug = core_text::substr(helper::slugify($location->location), 0, 92);
+            $locationslug = core_text::substr(helper::slugify($location->loc), 0, 92);
             $idnumber = 'loc_' . $locationslug . '_stu';
             $cohort = $DB->get_record('cohort', [
                 'idnumber' => $idnumber,
@@ -88,7 +88,7 @@ class location_cohort_sync extends scheduled_task {
             if (!$cohort) {
                 $cohort = new stdClass();
                 $cohort->idnumber = $idnumber;
-                $cohort->name = get_string('studentcohort', 'local_cohorts', ['name' => $location->location]);
+                $cohort->name = get_string('studentcohort', 'local_cohorts', ['name' => $location->loc]);
                 $cohort->description = get_string('cohortdescription', 'local_cohorts', ['name' => $cohort->name]);
                 $cohort->contextid = $systemcontext->id;
                 $cohort->component = 'local_cohorts';
@@ -114,7 +114,7 @@ class location_cohort_sync extends scheduled_task {
                 'session' => '%\_' . $currentsession,
                 'startdate' => time(),
                 'enddate' => time(),
-                'location' => $location->location,
+                'location' => $location->loc,
             ]);
 
             foreach ($locationcourses as $course) {
@@ -154,7 +154,7 @@ class location_cohort_sync extends scheduled_task {
                 mtrace(" - Removing {$member->username}");
                 cohort_remove_member($cohort->id, $member->userid);
             }
-            mtrace("End processing for \"{$location->location}\" cohort");
+            mtrace("End processing for \"{$location->loc}\" cohort");
         }
     }
 

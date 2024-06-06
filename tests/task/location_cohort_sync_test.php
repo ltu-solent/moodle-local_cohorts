@@ -55,10 +55,10 @@ final class location_cohort_sync_test extends \advanced_testcase {
         $catid = $dg->create_custom_field_category([])->get('id');
         $dg->create_custom_field(['categoryid' => $catid, 'type' => 'text', 'shortname' => 'location', 'name' => 'Location']);
         $locations = [
-            'loc_solent-university_stu' => 'Solent University',
-            'loc_qahe_stu' => 'QAHE',
             'loc_a-really-long-name-for-an-institution-that-might-get-trimmed-at-some-point-with-some-punctua_stu' =>
                 'A really long * name for an institution that might get trimmed at some point, with some ! punctuation',
+                'loc_qahe_stu' => 'QAHE',
+                'loc_solent-university_stu' => 'Solent University',
         ];
         $currentsession = helper::get_current_session();
         // Start with oldest session first.
@@ -155,54 +155,54 @@ final class location_cohort_sync_test extends \advanced_testcase {
             'solaissits'
         );
         $task->execute();
-        $expectedoutput .= "Start processing for \"Solent University\" cohort\n" .
-            " - Adding {$newstudent->username}\n" .
-            "End processing for \"Solent University\" cohort\n" .
-            "Start processing for \"QAHE\" cohort\n" .
-            "End processing for \"QAHE\" cohort\n" .
-            "Start processing for \"A really long * name for an institution that might " .
+        $expectedoutput .= "Start processing for \"A really long * name for an institution that might " .
                 "get trimmed at some point, with some ! punctuation\" cohort\n" .
             "End processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n";
+                "get trimmed at some point, with some ! punctuation\" cohort\n" .
+            "Start processing for \"QAHE\" cohort\n" .
+            "End processing for \"QAHE\" cohort\n" .
+            "Start processing for \"Solent University\" cohort\n" .
+            " - Adding {$newstudent->username}\n" .
+            "End processing for \"Solent University\" cohort\n";
 
         // Run task once more to show that no changes are made.
         $task->execute();
-        $expectedoutput .= "Start processing for \"Solent University\" cohort\n" .
-            "End processing for \"Solent University\" cohort\n" .
-            "Start processing for \"QAHE\" cohort\n" .
-            "End processing for \"QAHE\" cohort\n" .
-            "Start processing for \"A really long * name for an institution that might " .
+        $expectedoutput .= "Start processing for \"A really long * name for an institution that might " .
                 "get trimmed at some point, with some ! punctuation\" cohort\n" .
             "End processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n";
+                "get trimmed at some point, with some ! punctuation\" cohort\n" .
+            "Start processing for \"QAHE\" cohort\n" .
+            "End processing for \"QAHE\" cohort\n" .
+            "Start processing for \"Solent University\" cohort\n" .
+            "End processing for \"Solent University\" cohort\n";
 
         // Suspend that student.
         $newstudent->suspended = 1;
         user_update_user($newstudent, false, false);
         $task->execute();
-        $expectedoutput .= "Start processing for \"Solent University\" cohort\n" .
-            " - Removing {$newstudent->username}\n" .
-            "End processing for \"Solent University\" cohort\n" .
-            "Start processing for \"QAHE\" cohort\n" .
-            "End processing for \"QAHE\" cohort\n" .
-            "Start processing for \"A really long * name for an institution that might " .
+        $expectedoutput .= "Start processing for \"A really long * name for an institution that might " .
                 "get trimmed at some point, with some ! punctuation\" cohort\n" .
             "End processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n";
+                "get trimmed at some point, with some ! punctuation\" cohort\n" .
+            "Start processing for \"QAHE\" cohort\n" .
+            "End processing for \"QAHE\" cohort\n" .
+            "Start processing for \"Solent University\" cohort\n" .
+            " - Removing {$newstudent->username}\n" .
+            "End processing for \"Solent University\" cohort\n";
 
         // Reenable that student.
         $newstudent->suspended = 0;
         user_update_user($newstudent, false, false);
         $task->execute();
-        $expectedoutput .= "Start processing for \"Solent University\" cohort\n" .
-            " - Adding {$newstudent->username}\n" .
-            "End processing for \"Solent University\" cohort\n" .
-            "Start processing for \"QAHE\" cohort\n" .
-            "End processing for \"QAHE\" cohort\n" .
-            "Start processing for \"A really long * name for an institution that might " .
+        $expectedoutput .= "Start processing for \"A really long * name for an institution that might " .
                 "get trimmed at some point, with some ! punctuation\" cohort\n" .
             "End processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n";
+                "get trimmed at some point, with some ! punctuation\" cohort\n" .
+            "Start processing for \"QAHE\" cohort\n" .
+            "End processing for \"QAHE\" cohort\n" .
+            "Start processing for \"Solent University\" cohort\n" .
+            " - Adding {$newstudent->username}\n" .
+            "End processing for \"Solent University\" cohort\n";
 
         // Disable enrolment on one course - student still be enrolled on another,
         // so this won't affect the cohort membership.
@@ -225,14 +225,14 @@ final class location_cohort_sync_test extends \advanced_testcase {
         $this->assertEquals(ENROL_USER_SUSPENDED, $enrolment->status);
         $task->execute();
         // No changes.
-        $expectedoutput .= "Start processing for \"Solent University\" cohort\n" .
-            "End processing for \"Solent University\" cohort\n" .
-            "Start processing for \"QAHE\" cohort\n" .
-            "End processing for \"QAHE\" cohort\n" .
-            "Start processing for \"A really long * name for an institution that might " .
+        $expectedoutput .= "Start processing for \"A really long * name for an institution that might " .
                 "get trimmed at some point, with some ! punctuation\" cohort\n" .
             "End processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n";
+                "get trimmed at some point, with some ! punctuation\" cohort\n" .
+            "Start processing for \"QAHE\" cohort\n" .
+            "End processing for \"QAHE\" cohort\n" .
+            "Start processing for \"Solent University\" cohort\n" .
+            "End processing for \"Solent University\" cohort\n";
         $this->expectOutputString($expectedoutput);
     }
 

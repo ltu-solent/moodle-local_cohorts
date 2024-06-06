@@ -48,29 +48,27 @@ class location_cohort_sync extends scheduled_task {
      */
     public function execute() {
         global $DB;
-        /**
-         * Get currently running modules or modules in the current academic year.
-         * If account is suspended exclude.
-         *
-         * Some considerations:
-         * - Don't want students dropping off between semesters or sessions.
-         * - S2 ends in May restarts in October. ~3.5-4 months.
-         * - Reenrolments open some time in August, so it's possible for students to drop off
-         *   at the beginning of August.
-         * - Need to capture Cross-sessional
-         * - Take module enrolment status into consideration, but only if they don't
-         *   have any active enrolments in the current session.
-        */
+         // Get currently running modules or modules in the current academic year.
+         // If account is suspended exclude.
+         //
+         // Some considerations:
+         // - Don't want students dropping off between semesters or sessions.
+         // - S2 ends in May restarts in October. ~3.5-4 months.
+         // - Reenrolments open some time in August, so it's possible for students to drop off
+         // at the beginning of August.
+         // - Need to capture Cross-sessional
+         // - Take module enrolment status into consideration, but only if they don't
+         // have any active enrolments in the current session.
 
         $currentsession = helper::get_current_session();
 
         $studentroleid = $DB->get_field('role', 'id', ['shortname' => 'student']);
 
-        // Get all possible locations.
+        // Get all possible locations - Process alphabetically.
         $sql = "SELECT DISTINCT(cfd.value) loc
             FROM {customfield_data} cfd
             WHERE cfd.fieldid = (SELECT id FROM {customfield_field} WHERE shortname = 'location')
-                AND cfd.value != ''";
+                AND cfd.value != '' ORDER BY loc ASC";
         $locations = $DB->get_records_sql($sql);
         $systemcontext = context_system::instance();
 

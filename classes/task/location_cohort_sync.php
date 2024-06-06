@@ -19,6 +19,8 @@ namespace local_cohorts\task;
 use context_course;
 use context_system;
 use core\task\scheduled_task;
+use core_customfield\category;
+use core_customfield\field;
 use core_text;
 use local_cohorts\helper;
 use stdClass;
@@ -65,11 +67,28 @@ class location_cohort_sync extends scheduled_task {
         $studentroleid = $DB->get_field('role', 'id', ['shortname' => 'student']);
 
         // Get all possible locations - Process alphabetically.
+        $category = category::get_record([
+            'name' => 'Student Records System',
+            'area' => 'course',
+            'component' => 'core_course',
+        ]);
+        if (!$category) {
+            mtrace('Student Records System custom category not set up.');
+            return;
+        }
+        $field = field::get_record([
+            'shortname' => 'location_name',
+            'categoryid' => $category->get('id'),
+        ]);
+        if (!$field) {
+            mtrace('location_name custom field not set up');
+            return;
+        }
         $sql = "SELECT DISTINCT(cfd.value) loc
             FROM {customfield_data} cfd
-            WHERE cfd.fieldid = (SELECT id FROM {customfield_field} WHERE shortname = 'location')
+            WHERE cfd.fieldid = :fieldid
                 AND cfd.value != '' ORDER BY loc ASC";
-        $locations = $DB->get_records_sql($sql);
+        $locations = $DB->get_records_sql($sql, ['fieldid' => $field->get('id')]);
         $systemcontext = context_system::instance();
 
         foreach ($locations as $location) {
@@ -104,7 +123,7 @@ class location_cohort_sync extends scheduled_task {
             $sql = "SELECT cfd.instanceid courseid
                 FROM {customfield_data} cfd
                 JOIN {course} c on c.id = cfd.instanceid
-                WHERE cfd.fieldid = (SELECT id FROM {customfield_field} WHERE shortname = 'location')
+                WHERE cfd.fieldid = :fieldid
                     AND cfd.value = :location
                     AND ({$likesession}
                         OR (c.startdate < :startdate AND c.enddate > :enddate))";
@@ -113,6 +132,7 @@ class location_cohort_sync extends scheduled_task {
                 'startdate' => time(),
                 'enddate' => time(),
                 'location' => $location->loc,
+                'fieldid' => $field->get('id'),
             ]);
 
             foreach ($locationcourses as $course) {

@@ -17,6 +17,8 @@
 namespace local_cohorts\task;
 
 use context_system;
+use core_customfield\category;
+use core_customfield\field;
 use local_cohorts\helper;
 
 /**
@@ -37,6 +39,9 @@ final class location_cohort_sync_test extends \advanced_testcase {
     public function test_execute() {
         global $DB;
         $this->resetAfterTest();
+        // Run the test as an admin user, because the customfield location_name is locked.
+        // This is only relevant to testing in local where the field is already set-up.
+        $this->setAdminUser();
         // This test sets up courses that fall into 3 locations.
         // Each location has courses for different semester patterns.
         // Each location has courses set up from 2020/21 with up to 2 years in the future.
@@ -52,13 +57,12 @@ final class location_cohort_sync_test extends \advanced_testcase {
         $dg = $this->getDataGenerator();
         $enrol = enrol_get_plugin('solaissits');
         $this->enable_plugin();
-        $catid = $dg->create_custom_field_category([])->get('id');
-        $dg->create_custom_field(['categoryid' => $catid, 'type' => 'text', 'shortname' => 'location', 'name' => 'Location']);
+        $this->setup_location_customfield();
         $locations = [
             'loc_a-really-long-name-for-an-institution-that-might-get-trimmed-at-some-point-with-some-punctua_stu' =>
                 'A really long * name for an institution that might get trimmed at some point, with some ! punctuation',
-                'loc_qahe_stu' => 'QAHE',
-                'loc_solent-university_stu' => 'Solent University',
+            'loc_qahe_stu' => 'QAHE',
+            'loc_solent-university_stu' => 'Solent University',
         ];
         $currentsession = helper::get_current_session();
         // Start with oldest session first.
@@ -95,7 +99,12 @@ final class location_cohort_sync_test extends \advanced_testcase {
                         'idnumber' => str_replace('PERIOD', $periodkey, $idnumber),
                         'startdate' => strtotime($startdate),
                         'enddate' => strtotime($enddate),
-                        'customfield_location' => $location,
+                        'customfields' => [
+                            [
+                                'shortname' => 'location_name',
+                                'value' => $location,
+                            ],
+                        ],
                     ]);
                     $courses[$session][$periodkey][$locationkey] = $course;
                     $enrol->add_instance($course);
@@ -246,5 +255,44 @@ final class location_cohort_sync_test extends \advanced_testcase {
         $enabled['solaissits'] = true;
         $enabled = array_keys($enabled);
         set_config('enrol_plugins_enabled', implode(',', $enabled));
+    }
+
+    /**
+     * Set up the location name customfield, if required.
+     *
+     * @return void
+     */
+    protected function setup_location_customfield() {
+        $shortname = 'location_name';
+        $category = category::get_record([
+            'name' => 'Student Records System',
+            'area' => 'course',
+            'component' => 'core_course',
+        ]);
+        if (!$category) {
+            // No category, so create and use it.
+            $category = new category(0, (object)[
+                'name' => 'Student Records System',
+                'description' => 'Fields managed by the university\'s Student records system. Do not change unless asked to.',
+                'area' => 'course',
+                'component' => 'core_course',
+                'contextid' => context_system::instance()->id,
+            ]);
+            $category->save();
+        }
+        $field = field::get_record([
+            'shortname' => $shortname,
+            'categoryid' => $category->get('id'),
+        ]);
+        if ($field) {
+            // Already exists. Nothing to do here.
+            return;
+        }
+        $this->getDataGenerator()->create_custom_field([
+            'categoryid' => $category->get('id'),
+            'type' => 'text',
+            'shortname' => 'location_name',
+            'name' => 'Location',
+        ]);
     }
 }

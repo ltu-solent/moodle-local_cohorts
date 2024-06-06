@@ -48,17 +48,19 @@ class location_cohort_sync extends scheduled_task {
      */
     public function execute() {
         global $DB;
-        // Get currently running modules or modules in the current academic year.
-        // If account is suspended exclude.
-
-        // Some considerations:
-        // - Don't want students dropping off between semesters or sessions.
-        // - S2 ends in May restarts in October. ~3.5-4 months.
-        // - Reenrolments open some time in August, so it's possible for students to drop off
-        //   at the beginning of August.
-        // - Need to capture Cross-sessional
-        // - Take module enrolment status into consideration, but only if they don't
-        //   have any active enrolments in the current session.
+        /**
+         * Get currently running modules or modules in the current academic year.
+         * If account is suspended exclude.
+         *
+         * Some considerations:
+         * - Don't want students dropping off between semesters or sessions.
+         * - S2 ends in May restarts in October. ~3.5-4 months.
+         * - Reenrolments open some time in August, so it's possible for students to drop off
+         *   at the beginning of August.
+         * - Need to capture Cross-sessional
+         * - Take module enrolment status into consideration, but only if they don't
+         *   have any active enrolments in the current session.
+        */
 
         $currentsession = helper::get_current_session();
 

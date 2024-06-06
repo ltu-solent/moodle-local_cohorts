@@ -34,5 +34,13 @@ $tasks = [
         'day' => '*',
         'dayofweek' => '6',
         'month' => '*',
+    ], [
+        'classname' => 'local_cohorts\task\location_cohort_sync',
+        'blocking' => 0,
+        'minute' => '35',
+        'hour' => '01',
+        'day' => '*',
+        'dayofweek' => '*',
+        'month' => '*',
     ],
 ];

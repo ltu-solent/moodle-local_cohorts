@@ -492,4 +492,39 @@ class helper {
         }
         return $text;
     }
+
+    /**
+     * Returns key/value pairs for Session menu. Used also for validation.
+     *
+     * @return array
+     */
+    public static function get_session_menu(): array {
+        $years = range(2020, date('Y') + 1);
+        $options = [];
+        foreach ($years as $year) {
+            $yearplusone = substr($year, 2, 2) + 1;
+            $options[$year . '/' . $yearplusone] = $year . '/' . $yearplusone;
+        }
+        return array_reverse($options);
+    }
+
+    /**
+     * Gets the current academic year YYYY/YY. Based on 1st August being the start.
+     *
+     * @return string
+     */
+    public static function get_current_session(): string {
+        $currentmonth = date('n');
+        $thisyear = date('Y');
+        // New session begins 1st August.
+        if ($currentmonth >= 8) {
+            // 2024/25.
+            $currentsession = $thisyear . '/' . (substr($thisyear, 2, 2) + 1);
+        } else {
+            // 2023/24
+            $currentsession = ($thisyear - 1) . '/' . (substr($thisyear, 2, 2));
+        }
+
+        return $currentsession;
+    }
 }

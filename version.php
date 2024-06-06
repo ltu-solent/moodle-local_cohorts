@@ -28,3 +28,6 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->version  = 2024013001;
 $plugin->requires = 2015111603;
 $plugin->component = 'local_cohorts';
+$plugin->dependencies = [
+    'enrol_solaissits' => ANY_VERSION,
+];

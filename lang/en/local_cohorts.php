@@ -45,5 +45,8 @@ $string['studentcohort'] = 'Student cohort for {$a->name}';
 $string['synclocationcohorts'] = 'Sync Location Cohorts';
 $string['systemcohorts'] = 'System cohorts';
 
+$string['userprofilefielddescription'] = 'Auto populated {$a->name}. Members are enrolled based on their user profile {$a->field} field. ' .
+    'Only LDAP accounts are included. Suspended accounts are removed. "Excluded" accounts are not included.';
+
 $string['viewingmembers'] = 'Viewing members of {$a}';
 $string['viewmembers'] = 'View members of {$a}';

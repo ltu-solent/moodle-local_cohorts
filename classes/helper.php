@@ -337,6 +337,10 @@ class helper {
                 $cohort = new stdClass();
                 $cohort->contextid = $systemcontext->id;
                 $cohort->name = ucwords($user->department);
+                $cohort->description = get_string('userprofilefielddescription', 'local_cohorts', [
+                    'name' => $cohort->name,
+                    'field' => 'department',
+                ]);
                 $cohort->idnumber = strtolower($user->department);
                 $cohort->component = 'local_cohorts';
                 $deptcohortid = cohort_add_cohort($cohort);
@@ -357,6 +361,10 @@ class helper {
                 $cohort = new stdClass();
                 $cohort->contextid = $systemcontext->id;
                 $cohort->name = $user->institution;
+                $cohort->description = get_string('userprofilefielddescription', 'local_cohorts', [
+                    'name' => $cohort->name,
+                    'field' => 'institution',
+                ]);
                 $cohort->idnumber = $instslug;
                 $cohort->component = 'local_cohorts';
                 $instcohortid = cohort_add_cohort($cohort);
@@ -412,6 +420,10 @@ class helper {
             if (!$exists) {
                 $newcohort = new stdClass();
                 $newcohort->name = ucwords($dept->department);
+                $cohort->description = get_string('userprofilefielddescription', 'local_cohorts', [
+                    'name' => $cohort->name,
+                    'field' => 'department',
+                ]);
                 $newcohort->idnumber = strtolower($dept->department);
                 $newcohort->contextid = $context->id;
                 $newcohort->component = 'local_cohorts';
@@ -430,6 +442,10 @@ class helper {
             if (!$exists) {
                 $newcohort = new stdClass();
                 $newcohort->name = ucwords($inst->institution);
+                $cohort->description = get_string('userprofilefielddescription', 'local_cohorts', [
+                    'name' => $cohort->name,
+                    'field' => 'institution',
+                ]);
                 $newcohort->idnumber = 'inst_' . self::slugify($inst->institution);
                 $newcohort->contextid = $context->id;
                 $newcohort->component = 'local_cohorts';

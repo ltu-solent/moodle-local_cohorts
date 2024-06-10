@@ -30,4 +30,10 @@ if ($hassiteconfig) {
     include($CFG->dirroot . '/local/cohorts/settings/system.php');
     include($CFG->dirroot . '/local/cohorts/settings/department.php');
     $ADMIN->add('localplugins', $settings);
+
+    $ADMIN->add('accounts', new admin_externalpage(
+        'local_cohorts_cohorts',
+        get_string('pluginname', 'local_cohorts'),
+        new moodle_url('/local/cohorts/index.php')
+    ));
 }

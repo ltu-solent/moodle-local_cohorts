@@ -27,16 +27,23 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['addnewcohortmembers'] = 'Add new cohort members';
 
-$string['cohortdescription'] = 'Auto populated {$a->name}';
+
 $string['departmentcohorts'] = 'Department cohorts';
 $string['emailexcludepattern'] = 'Email exclude pattern';
 $string['emailexcludepattern_desc'] = 'Comma separated list of email patterns that are not included in the system cohorts. ' .
     'i.e. if the email address contains any of the text, it is excluded.';
 
+$string['locationcohortdescription'] = 'Auto populated {$a->name}. Members are enrolled on currently running modules or modules in the current academic year.' .
+    ' Suspended accounts are removed. Only Gateway enrolled students are included.';
+
 $string['pluginname'] = "SOL Cohorts";
 
+$string['solentmanagedcohorts'] = 'Solent managed cohorts';
 $string['staffcohorts'] = 'Staff cohorts';
 $string['staffcohorts_desc'] = 'Comma separated list of staff cohort shortcodes used in the user "department" field';
 $string['studentcohort'] = 'Student cohort for {$a->name}';
 $string['synclocationcohorts'] = 'Sync Location Cohorts';
 $string['systemcohorts'] = 'System cohorts';
+
+$string['viewingmembers'] = 'Viewing members of {$a}';
+$string['viewmembers'] = 'View members of {$a}';

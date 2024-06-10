@@ -25,6 +25,10 @@ use core_text;
 use local_cohorts\helper;
 use stdClass;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->dirroot . '/cohort/lib.php');
+
 /**
  * Class location_cohort_sync
  *
@@ -106,7 +110,7 @@ class location_cohort_sync extends scheduled_task {
                 $cohort = new stdClass();
                 $cohort->idnumber = $idnumber;
                 $cohort->name = get_string('studentcohort', 'local_cohorts', ['name' => $location->loc]);
-                $cohort->description = get_string('cohortdescription', 'local_cohorts', ['name' => $cohort->name]);
+                $cohort->description = get_string('locationcohortdescription', 'local_cohorts', ['name' => $cohort->name]);
                 $cohort->contextid = $systemcontext->id;
                 $cohort->component = 'local_cohorts';
                 $cohortid = cohort_add_cohort($cohort);

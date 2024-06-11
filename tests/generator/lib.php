@@ -29,12 +29,11 @@ class local_cohorts_generator extends component_generator_base {
     /**
      * Add managed cohort, and status record
      *
-     * @param array $cohort
-     * @param boolean $status
+     * @param array $cohort Cohort to be added.
+     * @param bool $status Enabled?
      * @return object
      */
     public function add_managed_cohort(array $cohort, bool $status = true): object {
-        global $USER;
         $dg = \testing_util::get_data_generator();
         $cohort = $dg->create_cohort($cohort);
         helper::update_cohort_status($cohort, $status);

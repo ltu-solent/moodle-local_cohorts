@@ -33,6 +33,7 @@ class cohorts_members_table extends table_sql {
      * Constructor
      *
      * @param string $uniqueid
+     * @param array $filters Parameters required to select the cohort.
      */
     public function __construct($uniqueid, $filters) {
         parent::__construct($uniqueid);

@@ -62,6 +62,10 @@ class add_new_cohort_members extends \core\task\scheduled_task {
             if (strpos($cohort->idnumber, 'inst_') === 0) {
                 $userfield = 'institution';
             }
+            // Don't process any location based cohorts.
+            if (strpos($cohort->idnumber, 'loc_') === 0) {
+                continue;
+            }
             switch ($cohort->idnumber) {
                 case 'all-staff':
                     helper::update_all_staff_cohort();

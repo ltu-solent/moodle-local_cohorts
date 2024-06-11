@@ -42,6 +42,8 @@ final class add_new_cohort_members_test extends \advanced_testcase {
      */
     public function test_execute($before, $after, $expectedoutput) {
         global $DB;
+        /** @var local_cohorts_generator $dg */
+        $dg = $this->getDataGenerator()->get_plugin_generator('local_cohorts');
         $this->resetAfterTest();
         $systemcontext = context_system::instance();
         // I don't want events to trigger for this test.
@@ -64,7 +66,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     'contextid' => $systemcontext->id,
                     'component' => 'local_cohorts',
                 ])) {
-                $this->getDataGenerator()->create_cohort([
+                $dg->add_managed_cohort([
                     'name' => ucwords($dept),
                     'idnumber' => $dept,
                     'contextid' => $systemcontext->id,
@@ -74,25 +76,27 @@ final class add_new_cohort_members_test extends \advanced_testcase {
         }
         foreach ($instcohorts as $instcohort) {
             $key = 'inst_' . helper::slugify($instcohort);
-            $this->getDataGenerator()->create_cohort([
+            $dg->add_managed_cohort([
                 'name' => $instcohort,
                 'idnumber' => $key,
                 'contextid' => $systemcontext->id,
                 'component' => 'local_cohorts',
             ]);
         }
-        $this->getDataGenerator()->create_cohort([
+        $dg->add_managed_cohort([
             'name' => 'All Staff',
             'idnumber' => 'all-staff',
             'contextid' => $systemcontext->id,
             'component' => 'local_cohorts',
         ]);
-        $this->getDataGenerator()->create_cohort([
+
+        $dg->add_managed_cohort([
             'name' => 'Student 6 months',
             'idnumber' => 'student6',
             'contextid' => $systemcontext->id,
             'component' => 'local_cohorts',
         ]);
+
         // I've put the events into a sink, so we can execute the task.
         $user = $this->getDataGenerator()->create_user($before['user']);
         $task = new add_new_cohort_members();

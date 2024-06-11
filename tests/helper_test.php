@@ -18,6 +18,8 @@ namespace local_cohorts;
 
 use context_coursecat;
 use context_system;
+use Exception;
+use local_cohorts_generator;
 
 /**
  * Tests for SOL Cohorts
@@ -38,6 +40,8 @@ class helper_test extends \advanced_testcase {
     public function test_update_user_department_cohort() {
         global $DB;
         $this->resetAfterTest();
+        /** @var local_cohorts_generator $dg */
+        $dg = $this->getDataGenerator()->get_plugin_generator('local_cohorts');
         $systemcontext = context_system::instance();
         // I don't want events to trigger for this test.
         $sink = $this->redirectEvents();
@@ -61,7 +65,7 @@ class helper_test extends \advanced_testcase {
 
         foreach ($deptcohorts as $dept) {
             if (!$DB->record_exists('cohort', ['idnumber' => $dept, 'contextid' => $systemcontext->id])) {
-                $systemcohorts[$dept] = $this->getDataGenerator()->create_cohort([
+                $systemcohorts[$dept] = $dg->add_managed_cohort([
                     'name' => ucwords($dept),
                     'idnumber' => $dept,
                     'contextid' => $systemcontext->id,
@@ -134,14 +138,14 @@ class helper_test extends \advanced_testcase {
         // Create the institute cohorts, but don't add anyone. Leave that for the task.
         foreach ($instcohorts as $instcohort) {
             $key = 'inst_' . helper::slugify($instcohort);
-            $systemcohorts[$key] = $this->getDataGenerator()->create_cohort([
+            $systemcohorts[$key] = $dg->add_managed_cohort([
                 'name' => $instcohort,
                 'idnumber' => $key,
                 'contextid' => $systemcontext->id,
                 'component' => 'local_cohorts',
             ]);
         }
-        $systemcohorts['all-staff'] = $this->getDataGenerator()->create_cohort([
+        $systemcohorts['all-staff'] = $dg->add_managed_cohort([
             'name' => 'All Staff',
             'idnumber' => 'all-staff',
             'contextid' => $systemcontext->id,
@@ -221,6 +225,8 @@ class helper_test extends \advanced_testcase {
     public function test_sync_user_profile_cohort($before, $after) {
         global $DB;
         $this->resetAfterTest();
+        /** @var local_cohorts_generator $dg */
+        $dg = $this->getDataGenerator()->get_plugin_generator('local_cohorts');
         $systemcontext = context_system::instance();
         $supportaccounts = ['academic', 'consultant', 'jobshop'];
         set_config('staffcohorts', 'academic,management,support', 'local_cohorts');
@@ -236,7 +242,7 @@ class helper_test extends \advanced_testcase {
         ];
         foreach ($deptcohorts as $dept) {
             if (!$DB->record_exists('cohort', ['idnumber' => $dept, 'contextid' => $systemcontext->id])) {
-                $this->getDataGenerator()->create_cohort([
+                $dg->add_managed_cohort([
                     'name' => ucwords($dept),
                     'idnumber' => $dept,
                     'contextid' => $systemcontext->id,
@@ -246,20 +252,20 @@ class helper_test extends \advanced_testcase {
         }
         foreach ($instcohorts as $instcohort) {
             $key = 'inst_' . helper::slugify($instcohort);
-            $this->getDataGenerator()->create_cohort([
+            $dg->add_managed_cohort([
                 'name' => $instcohort,
                 'idnumber' => $key,
                 'contextid' => $systemcontext->id,
                 'component' => 'local_cohorts',
             ]);
         }
-        $this->getDataGenerator()->create_cohort([
+        $dg->add_managed_cohort([
             'name' => 'All Staff',
             'idnumber' => 'all-staff',
             'contextid' => $systemcontext->id,
             'component' => 'local_cohorts',
         ]);
-        $this->getDataGenerator()->create_cohort([
+        $dg->add_managed_cohort([
             'name' => 'Student 6 months',
             'idnumber' => 'student6',
             'contextid' => $systemcontext->id,
@@ -271,6 +277,20 @@ class helper_test extends \advanced_testcase {
             'contextid' => $systemcontext->id,
             'component' => 'local_cohorts',
         ]);
+        if (isset($before['cohorts'])) {
+            foreach ($before['cohorts'] as $key => $data) {
+                $cohort = $DB->get_record('cohort', [
+                    'idnumber' => $key,
+                    'contextid' => $systemcontext->id,
+                    'component' => 'local_cohorts',
+                ]);
+                $visible = $data['visible'] ?? true;
+                $enabled = $data['enabled'] ?? true;
+                $cohort->visible = $visible;
+                cohort_update_cohort($cohort);
+                helper::update_cohort_status($cohort, $enabled);
+            }
+        }
 
         foreach ($systemcohorts as $cohort) {
             $ismember = cohort_is_member($cohort->id, $user->id);
@@ -287,6 +307,21 @@ class helper_test extends \advanced_testcase {
                 $deleteme = true;
             } else {
                 $user->{$field} = $value;
+            }
+        }
+
+        if (isset($after['cohorts'])) {
+            foreach ($after['cohorts'] as $key => $data) {
+                $cohort = $DB->get_record('cohort', [
+                    'idnumber' => $key,
+                    'contextid' => $systemcontext->id,
+                    'component' => 'local_cohorts',
+                ]);
+                $visible = $data['visible'] ?? true;
+                $enabled = $data['enabled'] ?? true;
+                $cohort->visible = $visible;
+                cohort_update_cohort($cohort);
+                helper::update_cohort_status($cohort, $enabled);
             }
         }
 
@@ -327,6 +362,7 @@ class helper_test extends \advanced_testcase {
                         'email' => 'jamie.teacher@solent.ac.uk',
                         'username' => 'teacherj',
                     ],
+                    'cohorts' => [],
                     'ismember' => [
                         'academic',
                         'all-staff',
@@ -340,6 +376,7 @@ class helper_test extends \advanced_testcase {
                         'institution' => 'Warsash Maritime School',
                         'username' => 'teacherj',
                     ],
+                    'cohorts' => [],
                     'ismember' => [
                         'academic',
                         'all-staff',
@@ -357,6 +394,7 @@ class helper_test extends \advanced_testcase {
                         'email' => 'jamie.teacher@solent.ac.uk',
                         'username' => 'teacherj',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
                 'after' => [
@@ -367,6 +405,7 @@ class helper_test extends \advanced_testcase {
                         'email' => 'jamie.teacher@solent.ac.uk',
                         'username' => 'teacherj',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
             ],
@@ -378,6 +417,7 @@ class helper_test extends \advanced_testcase {
                         'email' => 'jamie.teacher@solent.ac.uk',
                         'username' => 'academic123',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
                 'after' => [
@@ -388,6 +428,7 @@ class helper_test extends \advanced_testcase {
                         'email' => 'jamie.teacher@solent.ac.uk',
                         'username' => 'academic123',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
             ],
@@ -399,6 +440,7 @@ class helper_test extends \advanced_testcase {
                         'email' => 'academic123@solent.ac.uk',
                         'username' => 'academic123',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
                 'after' => [
@@ -409,6 +451,7 @@ class helper_test extends \advanced_testcase {
                         'email' => 'academic123@solent.ac.uk',
                         'username' => 'academic123',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
             ],
@@ -419,6 +462,7 @@ class helper_test extends \advanced_testcase {
                         'department' => 'academic',
                         'email' => 'john.smith@solent.ac.uk',
                     ],
+                    'cohorts' => [],
                     'ismember' => ['academic', 'all-staff'],
                 ],
                 'after' => [
@@ -426,6 +470,7 @@ class helper_test extends \advanced_testcase {
                         'department' => 'academic',
                         'suspended' => 1,
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
             ],
@@ -437,6 +482,7 @@ class helper_test extends \advanced_testcase {
                         'email' => 'john.smith@solent.ac.uk',
                         'suspended' => 1,
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
                 'after' => [
@@ -444,6 +490,7 @@ class helper_test extends \advanced_testcase {
                         'department' => 'academic',
                         'suspended' => 0,
                     ],
+                    'cohorts' => [],
                     'ismember' => ['academic', 'all-staff'],
                 ],
             ],
@@ -454,6 +501,7 @@ class helper_test extends \advanced_testcase {
                         'department' => 'academic',
                         'email' => 'john.smith@solent.ac.uk',
                     ],
+                    'cohorts' => [],
                     'ismember' => ['academic', 'all-staff'],
                 ],
                 'after' => [
@@ -461,6 +509,7 @@ class helper_test extends \advanced_testcase {
                         'department' => 'academic',
                         'deleted' => 1,
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
             ],
@@ -470,12 +519,14 @@ class helper_test extends \advanced_testcase {
                         'auth' => 'ldap',
                         'email' => 'jobshop1@solent.ac.uk',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
                 'after' => [
                     'user' => [
                         'department' => 'support',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
             ],
@@ -485,12 +536,14 @@ class helper_test extends \advanced_testcase {
                         'email' => 'bobby.console@solent.ac.uk',
                         'username' => 'consultant1',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
                 'after' => [
                     'user' => [
                         'department' => 'support',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
             ],
@@ -504,10 +557,12 @@ class helper_test extends \advanced_testcase {
                         'email' => 'jamie.teacher@external.ac.uk',
                         'username' => 'jamie.teacher',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
                 'after' => [
                     'user' => [],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
             ],
@@ -518,12 +573,14 @@ class helper_test extends \advanced_testcase {
                         'email' => 'john.smith@solent.ac.uk',
                         'department' => 'academic',
                     ],
+                    'cohorts' => [],
                     'ismember' => ['academic', 'all-staff'],
                 ],
                 'after' => [
                     'user' => [
                         'department' => 'support',
                     ],
+                    'cohorts' => [],
                     'ismember' => ['support', 'all-staff'],
                 ],
             ],
@@ -534,11 +591,45 @@ class helper_test extends \advanced_testcase {
                         'department' => 'random',
                         'email' => 'john.smith@solent.ac.uk',
                     ],
+                    'cohorts' => [],
                     'ismember' => ['random'],
                 ],
                 'after' => [
                     'user' => [],
+                    'cohorts' => [],
                     'ismember' => ['random'],
+                ],
+            ],
+            'disabled_random_dept' => [
+                'before' => [
+                    'user' => [
+                        'auth' => 'ldap',
+                        'department' => 'random',
+                        'institution' => 'ICT',
+                        'email' => 'john.smith@solent.ac.uk',
+                    ],
+                    'cohorts' => [
+                        'random' => [
+                            'visible' => true,
+                            'enabled' => true,
+                        ],
+                    ],
+                    'ismember' => [
+                        'random',
+                        'inst_ict',
+                    ],
+                ],
+                'after' => [
+                    'user' => [],
+                    'cohorts' => [
+                        'random' => [
+                            'visible' => false,
+                            'enabled' => false,
+                        ],
+                    ],
+                    'ismember' => [
+                        'inst_ict',
+                    ],
                 ],
             ],
             'student' => [
@@ -548,10 +639,12 @@ class helper_test extends \advanced_testcase {
                         'department' => 'student',
                         'email' => 'smithj1@solent.ac.uk',
                     ],
+                    'cohorts' => [],
                     'ismember' => ['student'],
                 ],
                 'after' => [
                     'user' => [],
+                    'cohorts' => [],
                     'ismember' => ['student'],
                 ],
             ],
@@ -565,6 +658,7 @@ class helper_test extends \advanced_testcase {
                         'email' => 'julie.student@solent.ac.uk',
                         'username' => '0studentj1',
                     ],
+                    'cohorts' => [],
                     'ismember' => ['student'],
                 ],
                 'after' => [
@@ -575,6 +669,7 @@ class helper_test extends \advanced_testcase {
                         'email' => 'julie.student@solent.ac.uk',
                         'username' => '0studentj1',
                     ],
+                    'cohorts' => [],
                     'ismember' => [],
                 ],
             ],
@@ -583,53 +678,111 @@ class helper_test extends \advanced_testcase {
 
     /**
      * Test adopt_a_cohort
+     * @param array $cohort Params for creating cohort
+     * @param bool $adopted Will this cohort be adopted
+     * @param bool $enabled Enabled if adopted and visible
      * @covers \local_cohort\helper::adopt_a_cohort
-     *
+     * @dataProvider adopt_a_cohort_provider
      * @return void
      */
-    public function test_adopt_a_cohort() {
+    public function test_adopt_a_cohort($cohort, $adopted, $enabled) {
+        global $DB;
         $this->resetAfterTest();
         $systemcontext = context_system::instance();
-        $cohorts = [];
-        $cohorts['system'] = $this->getDataGenerator()->create_cohort([
-            'description' => 'Something something Auto populated something something',
-            'idnumber' => 'system-cohort',
-            'contextid' => $systemcontext->id,
-        ]);
-        $cohorts['noidnumber'] = $this->getDataGenerator()->create_cohort([
-            'name' => 'No Idnumber',
-            'idnumber' => '',
-            'contextid' => $systemcontext->id,
-        ]);
-        $cohorts['manually'] = $this->getDataGenerator()->create_cohort([
-            'name' => 'Manually',
-            'idnumber' => 'manually',
-            'description' => 'Manually populated',
-            'contextid' => $systemcontext->id,
-        ]);
-        $cohorts['auto'] = $this->getDataGenerator()->create_cohort([
-            'name' => 'Auto populated',
-            'idnumber' => 'auto',
-            'description' => 'Auto populated',
-            'contextid' => $systemcontext->id,
-        ]);
-        $cohorts['system-owned'] = $this->getDataGenerator()->create_cohort([
-            'idnumber' => 'system-owned',
-            'contextid' => $systemcontext->id,
-            'component' => 'local_something',
-        ]);
         $cat = $this->getDataGenerator()->create_category();
         $catccontext = context_coursecat::instance($cat->id);
-        $cohorts['cat'] = $this->getDataGenerator()->create_cohort([
-            'idnumber' => 'cat',
-            'contextid' => $catccontext->id,
-        ]);
-        $this->assertTrue(helper::adopt_a_cohort($cohorts['system']->id));
-        $this->assertFalse(helper::adopt_a_cohort($cohorts['noidnumber']->id));
-        $this->assertFalse(helper::adopt_a_cohort($cohorts['manually']->id));
-        $this->assertTrue(helper::adopt_a_cohort($cohorts['auto']->id));
-        $this->assertFalse(helper::adopt_a_cohort($cohorts['system-owned']->id));
-        $this->assertFalse(helper::adopt_a_cohort($cohorts['cat']->id));
+        switch ($cohort['contextid']) {
+            case 'catcontext':
+                $cohort['contextid'] = $catccontext->id;
+                break;
+            default:
+                $cohort['contextid'] = $systemcontext->id;
+                break;
+        }
+        $record = $this->getDataGenerator()->create_cohort($cohort);
+        $isadopted = helper::adopt_a_cohort($record->id);
+        $this->assertEquals($adopted, $isadopted);
+        $status = $DB->get_record('local_cohorts_status', ['cohortid' => $record->id]);
+        if ($adopted) {
+            $this->assertEquals($enabled, $status->enabled);
+        }
+    }
+
+    /**
+     * Data provider for adopt a cohort
+     *
+     * @return array [cohort, adopted, enabled]
+     */
+    public static function adopt_a_cohort_provider(): array {
+        return [
+            'system' => [
+                'cohort' => [
+                    'description' => 'Something something Auto populated something something',
+                    'idnumber' => 'system-cohort',
+                    'contextid' => 'systemcontext',
+                    'visible' => true,
+                ],
+                'adopted' => true,
+                'enabled' => true,
+            ],
+            'noidnumber' => [
+                'cohort' => [
+                    'name' => 'No Idnumber',
+                    'idnumber' => '',
+                    'contextid' => 'systemcontext',
+                ],
+                'adopted' => false,
+                'enabled' => false,
+            ],
+            'manually' => [
+                'cohort' => [
+                    'name' => 'Manually',
+                    'idnumber' => 'manually',
+                    'description' => 'Manually populated',
+                    'contextid' => 'systemcontext',
+                ],
+                'adopted' => false,
+                'enabled' => false,
+            ],
+            'auto' => [
+                'cohort' => [
+                    'name' => 'Auto populated',
+                    'idnumber' => 'auto',
+                    'description' => 'Auto populated',
+                    'contextid' => 'systemcontext',
+                ],
+                'adopted' => true,
+                'enabled' => true,
+            ],
+            'system-owned' => [
+                'cohort' => [
+                    'idnumber' => 'system-owned',
+                    'contextid' => 'systemcontext',
+                    'component' => 'local_something',
+                ],
+                'adopted' => false,
+                'enabled' => false,
+            ],
+            'cat' => [
+                'cohort' => [
+                    'idnumber' => 'cat',
+                    'contextid' => 'catccontext',
+                ],
+                'adopted' => false,
+                'enabled' => false,
+            ],
+            'auto-invisible' => [
+                'cohort' => [
+                    'name' => 'Auto populated',
+                    'idnumber' => 'auto',
+                    'description' => 'Auto populated',
+                    'contextid' => 'systemcontext',
+                    'visible' => false,
+                ],
+                'adopted' => true,
+                'enabled' => false,
+            ],
+        ];
     }
 
     /**
@@ -642,7 +795,7 @@ class helper_test extends \advanced_testcase {
         global $DB;
         $this->resetAfterTest();
         // I don't want events to trigger for this test.
-        $sink = $this->redirectEvents();
+        $this->redirectEvents();
         $systemcontext = context_system::instance();
         $cohorts = [];
         // No migration: Incorrect description.
@@ -682,6 +835,8 @@ class helper_test extends \advanced_testcase {
             'component' => 'local_cohorts',
         ]);
         $this->assertCount(0, $migrated);
+        $status = $DB->get_records('local_cohorts_status');
+        $this->assertCount(0, $status);
 
         helper::migrate_cohorts();
         $migrated = $DB->get_records('cohort', [
@@ -689,6 +844,8 @@ class helper_test extends \advanced_testcase {
             'component' => 'local_cohorts',
         ]);
         $this->assertCount(2, $migrated);
+        $status = $DB->get_records('local_cohorts_status');
+        $this->assertCount(2, $status);
 
         // Duplicate to ensure each cohort is only created once.
         $this->getDataGenerator()->create_user(['department' => 'Academic', 'institution' => 'Warsash Maritime School']);
@@ -699,6 +856,8 @@ class helper_test extends \advanced_testcase {
             'component' => 'local_cohorts',
         ]);
         $this->assertCount(4, $migrated);
+        $status = $DB->get_records('local_cohorts_status');
+        $this->assertCount(4, $status);
 
         $this->getDataGenerator()->create_user([
             'department' => 'support',
@@ -710,6 +869,8 @@ class helper_test extends \advanced_testcase {
             'component' => 'local_cohorts',
         ]);
         $this->assertCount(6, $migrated);
+        $status = $DB->get_records('local_cohorts_status');
+        $this->assertCount(6, $status);
 
         $this->getDataGenerator()->create_user(['department' => 'Management', 'institution' => 'Solent Students\' Union']);
         helper::migrate_cohorts();
@@ -718,5 +879,7 @@ class helper_test extends \advanced_testcase {
             'component' => 'local_cohorts',
         ]);
         $this->assertCount(8, $migrated);
+        $status = $DB->get_records('local_cohorts_status');
+        $this->assertCount(8, $status);
     }
 }

@@ -14,28 +14,30 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+use local_cohorts\helper;
+
 /**
- * Event observers for SOL Cohorts
+ * Data generator class
  *
  * @package    local_cohorts
- * @category   event
+ * @category   test
  * @copyright  2024 Solent University {@link https://www.solent.ac.uk}
+ * @author Mark Sharp <mark.sharp@solent.ac.uk>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
-
-$observers = [
-    [
-        'eventname' => '\core\event\user_updated',
-        'callback' => '\local_cohorts\observers::user_updated',
-    ],
-    [
-        'eventname' => '\core\event\user_created',
-        'callback' => '\local_cohorts\observers::user_created',
-    ],
-    [
-        'eventname' => '\core\event\cohort_deleted',
-        'callback' => '\local_cohorts\observers::cohort_deleted',
-    ],
-];
+class local_cohorts_generator extends component_generator_base {
+    /**
+     * Add managed cohort, and status record
+     *
+     * @param array $cohort
+     * @param boolean $status
+     * @return object
+     */
+    public function add_managed_cohort(array $cohort, bool $status = true): object {
+        global $USER;
+        $dg = \testing_util::get_data_generator();
+        $cohort = $dg->create_cohort($cohort);
+        helper::update_cohort_status($cohort, $status);
+        return $cohort;
+    }
+}

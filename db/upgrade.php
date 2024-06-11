@@ -34,9 +34,24 @@ use local_cohorts\helper;
  * @return bool
  */
 function xmldb_local_cohorts_upgrade($oldversion) {
-    if ($oldversion < 2024041901) {
+    global $DB;
+    $dbman = $DB->get_manager();
+    if ($oldversion < 2024041903) {
+        $table = new xmldb_table('local_cohorts_status');
+        if (!$dbman->table_exists($table)) {
+            $table->add_field('id', XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, XMLDB_SEQUENCE, null, null);
+            $table->add_field('cohortid', XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, null, null);
+            $table->add_field('enabled', XMLDB_TYPE_INTEGER, '1', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, 1);
+            $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, 0);
+            $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, 0);
+            $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', XMLDB_UNSIGNED, XMLDB_NOTNULL, null, 0);
+            $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+            $table->add_key('cohortid', XMLDB_KEY_FOREIGN_UNIQUE, ['cohortid'], 'cohort', ['id']);
+            $table->add_key('usermodified', XMLDB_KEY_FOREIGN, ['usermodified'], 'user', ['id']);
+            $dbman->create_table($table);
+        }
         helper::migrate_cohorts();
-        upgrade_plugin_savepoint(true, 2024041901, 'local', 'cohorts');
+        upgrade_plugin_savepoint(true, 2024041903, 'local', 'cohorts');
     }
     return true;
 }

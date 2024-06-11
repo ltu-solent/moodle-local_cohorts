@@ -48,4 +48,16 @@ class observers {
         $userid = $event->objectid;
         helper::sync_user_profile_cohort($userid);
     }
+
+    /**
+     * Delete status record if a cohort is deleted.
+     *
+     * @param \core\event\cohort_deleted $event
+     * @return void
+     */
+    public static function cohort_deleted(\core\event\cohort_deleted $event) {
+        global $DB;
+        $DB->delete_records('local_cohorts_status', ['cohortid' => $event->objectid]);
+        return true;
+    }
 }

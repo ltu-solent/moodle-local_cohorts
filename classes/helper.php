@@ -97,12 +97,28 @@ class helper {
         if (!in_array($field, ['department', 'institution'])) {
             return;
         }
+        $cohortstatus = $DB->get_record('local_cohorts_status', ['cohortid' => $cohort->id]);
+        if (!$cohortstatus) {
+            $cohortstatus = self::update_cohort_status($cohort, true);
+        }
+
         $existingmembers = $DB->get_records_sql("SELECT cm.userid, u.username, u.department, u.institution, u.idnumber
             FROM {cohort_members} cm
             JOIN {user} u ON u.id = cm.userid
             WHERE cm.cohortid = :cohortid", [
                 'cohortid' => $cohortid,
             ]);
+
+        if ($cohortstatus->enabled == 0) {
+            if (count($existingmembers) > 0) {
+                mtrace("The cohort \"{$cohort->name}\" has been disabled. Removing all users.");
+                foreach ($existingmembers as $existingmember) {
+                    mtrace(" - Removing {$existingmember->username}");
+                    cohort_remove_member($cohort->id, $existingmember->userid);
+                }
+            }
+            return;
+        }
 
         // Build query for potential members.
         $emailexcludepattern = $config->emailexcludepattern ?? '';
@@ -180,12 +196,28 @@ class helper {
             return;
         }
 
+        $cohortstatus = $DB->get_record('local_cohorts_status', ['cohortid' => $cohort->id]);
+        if (!$cohortstatus) {
+            $cohortstatus = self::update_cohort_status($cohort, true);
+        }
         $existingmembers = $DB->get_records_sql("SELECT cm.userid, u.username, u.department, u.institution, u.idnumber
             FROM {cohort_members} cm
             JOIN {user} u ON u.id = cm.userid
             WHERE cm.cohortid = :cohortid", [
                 'cohortid' => $cohort->id,
             ]);
+
+        if ($cohortstatus->enabled == 0) {
+            if (count($existingmembers) > 0) {
+                mtrace("The cohort \"{$cohort->name}\" has been disabled. Removing all users.");
+                foreach ($existingmembers as $existingmember) {
+                    mtrace("- Removing {$existingmember->username}");
+                    cohort_remove_member($cohort->id, $existingmember->userid);
+                }
+            }
+            return;
+        }
+
         // Build query for potential members.
         $emailexcludepattern = $config->emailexcludepattern ?? '';
         $excludeemails = [];
@@ -240,6 +272,7 @@ class helper {
 
     /**
      * Update cohort enrolment for a user based on their department and institution field.
+     * This is triggered when a user is updated.
      *
      * @param int $userid
      * @return void
@@ -344,8 +377,16 @@ class helper {
                 $cohort->idnumber = strtolower($user->department);
                 $cohort->component = 'local_cohorts';
                 $deptcohortid = cohort_add_cohort($cohort);
+                $cohort->id = $deptcohortid;
+                self::update_cohort_status($cohort);
             }
-            if ($deptcohortid && !cohort_is_member($deptcohortid, $userid)) {
+            $status = $DB->get_record('local_cohorts_status', ['cohortid' => $deptcohortid]);
+            if ($status->enabled == 0) {
+                if (cohort_is_member($deptcohortid, $userid)) {
+                    cohort_remove_member($deptcohortid, $userid);
+                }
+            }
+            if ($deptcohortid && $status->enabled == 1 && !cohort_is_member($deptcohortid, $userid)) {
                 cohort_add_member($deptcohortid, $userid);
             }
         }
@@ -368,8 +409,16 @@ class helper {
                 $cohort->idnumber = $instslug;
                 $cohort->component = 'local_cohorts';
                 $instcohortid = cohort_add_cohort($cohort);
+                $cohort->id = $instcohortid;
+                self::update_cohort_status($cohort);
             }
-            if ($instcohortid && !cohort_is_member($instcohortid, $userid)) {
+            $status = $DB->get_record('local_cohorts_status', ['cohortid' => $instcohortid]);
+            if ($status->enabled == 0) {
+                if (cohort_is_member($instcohortid, $userid)) {
+                    cohort_remove_member($instcohortid, $userid);
+                }
+            }
+            if ($instcohortid && $status->enabled == 1 && !cohort_is_member($instcohortid, $userid)) {
                 cohort_add_member($instcohortid, $userid);
             }
         }
@@ -386,8 +435,16 @@ class helper {
             $cohort->idnumber = 'all-staff';
             $cohort->component = 'local_cohorts';
             $staffcohortid = cohort_add_cohort($cohort);
+            $cohort->id = $staffcohortid;
+            self::update_cohort_status($cohort);
         }
-        if ($isstaff && !cohort_is_member($staffcohortid, $userid)) {
+        $status = $DB->get_record('local_cohorts_status', ['cohortid' => $staffcohortid]);
+        if ($status->enabled == 0) {
+            if (cohort_is_member($staffcohortid, $userid)) {
+                cohort_remove_member($staffcohortid, $userid);
+            }
+        }
+        if ($isstaff && $status->enabled == 1 && !cohort_is_member($staffcohortid, $userid)) {
             cohort_add_member($staffcohortid, $userid);
         }
     }
@@ -398,7 +455,7 @@ class helper {
      * @return void
      */
     public static function migrate_cohorts() {
-        global $DB;
+        global $DB, $USER;
         $context = context_system::instance();
         $cohorts = $DB->get_records('cohort', [
             'contextid' => $context->id,
@@ -427,7 +484,8 @@ class helper {
                 $newcohort->idnumber = strtolower($dept->department);
                 $newcohort->contextid = $context->id;
                 $newcohort->component = 'local_cohorts';
-                cohort_add_cohort($newcohort);
+                $newcohort->id = cohort_add_cohort($newcohort);
+                self::update_cohort_status($newcohort);
             }
         }
         $insts = $DB->get_records_sql("SELECT DISTINCT(institution)
@@ -449,7 +507,8 @@ class helper {
                 $newcohort->idnumber = 'inst_' . self::slugify($inst->institution);
                 $newcohort->contextid = $context->id;
                 $newcohort->component = 'local_cohorts';
-                cohort_add_cohort($newcohort);
+                $newcohort->id = cohort_add_cohort($newcohort);
+                self::update_cohort_status($newcohort);
             }
         }
     }
@@ -461,7 +520,7 @@ class helper {
      * @return bool
      */
     public static function adopt_a_cohort($cohortid): bool {
-        global $DB;
+        global $DB, $USER;
         $cohort = $DB->get_record('cohort', ['id' => $cohortid]);
         $systemcontext = context_system::instance();
         if ($cohort->contextid != $systemcontext->id) {
@@ -483,7 +542,14 @@ class helper {
         $cohort->idnumber = strtolower($cohort->idnumber);
         $cohort->component = 'local_cohorts';
         $cohort->timemodified = time();
-        return $DB->update_record('cohort', $cohort);
+        // If a cohort is not visible, the status will be set to disabled.
+        // If a cohort is disabled, all members will be removed.
+        // Using disabled rather than deleting because cohort is dynamic, and
+        // will get recreated if deleted.
+        $status = $cohort->visible;
+        $DB->update_record('cohort', $cohort);
+        self::update_cohort_status($cohort, $status);
+        return true;
     }
 
     /**
@@ -542,5 +608,33 @@ class helper {
         }
 
         return $currentsession;
+    }
+
+    /**
+     * Updates or adds the status in the local_cohorts_status table
+     *
+     * @param object $cohort Cohort object
+     * @param bool $enabled Status of record
+     * @return object Status record
+     */
+    public static function update_cohort_status($cohort, $enabled = true): object {
+        global $DB, $USER;
+        $status = $DB->get_record('local_cohorts_status', ['cohortid' => $cohort->id]);
+        if (!$status) {
+            $status = new stdClass();
+            $status->cohortid = $cohort->id;
+            $status->enabled = $enabled;
+            $status->usermodified = $USER->id;
+            $status->timeadded = time();
+            $status->timemodified = time();
+            $status->id = $DB->insert_record('local_cohorts_status', $status);
+        } else {
+            $status->usermodified = $USER->id;
+            $status->enabled = $enabled;
+            $status->timemodified = time();
+            $DB->update_record('local_cohorts_status', $status);
+        }
+        $status = $DB->get_record('local_cohorts_status', ['cohortid' => $cohort->id]);
+        return $status;
     }
 }

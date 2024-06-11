@@ -18,6 +18,7 @@ namespace local_cohorts\tables;
 
 use context_system;
 use lang_string;
+use moodle_url;
 use table_sql;
 
 /**
@@ -48,6 +49,7 @@ class cohorts_members_table extends table_sql {
 
         $this->define_columns($columns);
         $this->define_headers($columnheadings);
+        $this->define_baseurl(new moodle_url("/local/cohorts/members.php", ['cohortid' => $filters['cohortid']]));
         $userfieldsapi = \core_user\fields::for_identity(context_system::instance(), false)->with_userpic();
         $userfields = $userfieldsapi->get_sql('u', false, '', $this->useridfield, false)->selects;
         $fields = 'cm.id, cm.timeadded, ' . $userfields;

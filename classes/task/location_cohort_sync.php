@@ -115,11 +115,26 @@ class location_cohort_sync extends scheduled_task {
                 $cohort->component = 'local_cohorts';
                 $cohortid = cohort_add_cohort($cohort);
                 $cohort = $DB->get_record('cohort', ['id' => $cohortid]);
+                helper::update_cohort_status($cohort, true);
             }
             $currentmembers = $DB->get_records_sql("SELECT cm.userid, u.username
                 FROM {cohort_members} cm
                 JOIN {user} u ON u.id = cm.userid
                 WHERE cm.cohortid = :cohortid", ['cohortid' => $cohort->id]);
+            $cohortstatus = $DB->get_record('local_cohorts_status', ['cohortid' => $cohort->id]);
+            if (!$cohortstatus) {
+                $cohortstatus = helper::update_cohort_status($cohort, true);
+            }
+            if ($cohortstatus->enabled == 0) {
+                if (count($currentmembers) > 0) {
+                    mtrace("The cohort \"{$cohort->name}\" has been disabled. Removing all users.");
+                    foreach ($currentmembers as $existingmember) {
+                        mtrace("- Removing {$existingmember->username}");
+                        cohort_remove_member($cohort->id, $existingmember->userid);
+                    }
+                }
+                continue;
+            }
             $prospectivemembers = [];
 
             // Get all currently running courseids for the given location.

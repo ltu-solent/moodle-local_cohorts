@@ -40,6 +40,8 @@ echo $OUTPUT->header();
 
 $PAGE->set_title(get_string('solentmanagedcohorts', 'local_cohorts'));
 
+echo format_text(get_string('managecohorts_help', 'local_cohorts'));
+
 $table = new cohorts_table('local_cohorts_cohorts');
 $table->out(100, false);
 

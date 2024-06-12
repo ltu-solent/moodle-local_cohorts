@@ -20,6 +20,10 @@ use context_system;
 use core_user;
 use stdClass;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->dirroot . '/cohort/lib.php');
+
 /**
  * Class helper
  *

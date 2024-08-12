@@ -81,7 +81,6 @@ final class location_cohort_sync_test extends \advanced_testcase {
         $studentmap = [];
         $moduleleader = $dg->create_user();
         $tutor = $dg->create_user();
-        $expectedoutput = '';
         // Create a module for each period type in each session for each location.
         foreach ($sessionmenu as $session) {
             $x = 0;
@@ -112,8 +111,9 @@ final class location_cohort_sync_test extends \advanced_testcase {
                     $dg->enrol_user($tutor->id, $course->id, 'teacher', 'manual');
                     foreach ($studentmap[$session] as $index) {
                         if (!isset($students[$index][$location])) {
-                            $students[$index][$location][] = $dg->create_user();
-                            $students[$index][$location][] = $dg->create_user();
+                            $shortlocation = substr(helper::slugify($location), 0, 35);
+                            $students[$index][$location][] = $dg->create_user(['username' => 'stud' . $index . $shortlocation . '1']);
+                            $students[$index][$location][] = $dg->create_user(['username' => 'stud' . $index . $shortlocation . '2']);
                         }
                     }
                     foreach ($studentmap[$session] as $index) {
@@ -132,7 +132,9 @@ final class location_cohort_sync_test extends \advanced_testcase {
         $task->execute();
 
         $systemcontext = context_system::instance();
-        $expectedoutput = '';
+        // Using Regex here as the output is too complicated to exactly match string.
+        $expectedoutputregex = "#Start processing for \".*\" cohort#";
+        $this->expectOutputRegex($expectedoutputregex);
         foreach ($locations as $lokey => $location) {
             $cohort = $DB->get_record('cohort', [
                 'idnumber' => $lokey,
@@ -140,15 +142,10 @@ final class location_cohort_sync_test extends \advanced_testcase {
                 'component' => 'local_cohorts',
             ]);
             $this->assertEquals($cohort->name, get_string('studentcohort', 'local_cohorts', ['name' => $location]));
-            $members = $DB->get_records('cohort_members', ['cohortid' => $cohort->id], '', 'userid');
-            $expectedoutput .= "Start processing for \"{$location}\" cohort\n";
             foreach ($currentstudents[$location] as $currentstudent) {
-                $this->assertArrayHasKey($currentstudent->id, $members);
-                $expectedoutput .= " - Adding {$currentstudent->username}\n";
+                $this->assertTrue(cohort_is_member($cohort->id, $currentstudent->id));
             }
-            $expectedoutput .= "End processing for \"{$location}\" cohort\n";
         }
-
         // Add a student to two Solent modules.
         $newstudent = $dg->create_user();
         $dg->enrol_user(
@@ -163,55 +160,57 @@ final class location_cohort_sync_test extends \advanced_testcase {
             'student',
             'solaissits'
         );
+        $solentcohort = $DB->get_record('cohort', [
+            'idnumber' => 'loc_solent-university_stu',
+            'contextid' => $systemcontext->id,
+            'component' => 'local_cohorts',
+        ]);
+        $countbefore = $DB->count_records('cohort_members', [
+            'cohortid' => $solentcohort->id,
+        ]);
         $task->execute();
-        $expectedoutput .= "Start processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n" .
-            "End processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n" .
-            "Start processing for \"QAHE\" cohort\n" .
-            "End processing for \"QAHE\" cohort\n" .
-            "Start processing for \"Solent University\" cohort\n" .
-            " - Adding {$newstudent->username}\n" .
-            "End processing for \"Solent University\" cohort\n";
+        $countafter = $DB->count_records('cohort_members', [
+            'cohortid' => $solentcohort->id,
+        ]);
+        $this->assertSame($countbefore + 1, $countafter);
+        $this->assertTrue(cohort_is_member($solentcohort->id, $newstudent->id));
 
         // Run task once more to show that no changes are made.
+        $countbefore = $DB->count_records('cohort_members', [
+            'cohortid' => $solentcohort->id,
+        ]);
         $task->execute();
-        $expectedoutput .= "Start processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n" .
-            "End processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n" .
-            "Start processing for \"QAHE\" cohort\n" .
-            "End processing for \"QAHE\" cohort\n" .
-            "Start processing for \"Solent University\" cohort\n" .
-            "End processing for \"Solent University\" cohort\n";
+        $countafter = $DB->count_records('cohort_members', [
+            'cohortid' => $solentcohort->id,
+        ]);
+        $this->assertSame($countbefore, $countafter);
+        $this->assertTrue(cohort_is_member($solentcohort->id, $newstudent->id));
 
         // Suspend that student.
+        $countbefore = $DB->count_records('cohort_members', [
+            'cohortid' => $solentcohort->id,
+        ]);
         $newstudent->suspended = 1;
         user_update_user($newstudent, false, false);
         $task->execute();
-        $expectedoutput .= "Start processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n" .
-            "End processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n" .
-            "Start processing for \"QAHE\" cohort\n" .
-            "End processing for \"QAHE\" cohort\n" .
-            "Start processing for \"Solent University\" cohort\n" .
-            " - Removing {$newstudent->username}\n" .
-            "End processing for \"Solent University\" cohort\n";
+        $countafter = $DB->count_records('cohort_members', [
+            'cohortid' => $solentcohort->id,
+        ]);
+        $this->assertSame($countbefore - 1, $countafter);
+        $this->assertFalse(cohort_is_member($solentcohort->id, $newstudent->id));
 
         // Reenable that student.
+        $countbefore = $DB->count_records('cohort_members', [
+            'cohortid' => $solentcohort->id,
+        ]);
         $newstudent->suspended = 0;
         user_update_user($newstudent, false, false);
         $task->execute();
-        $expectedoutput .= "Start processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n" .
-            "End processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n" .
-            "Start processing for \"QAHE\" cohort\n" .
-            "End processing for \"QAHE\" cohort\n" .
-            "Start processing for \"Solent University\" cohort\n" .
-            " - Adding {$newstudent->username}\n" .
-            "End processing for \"Solent University\" cohort\n";
+        $countafter = $DB->count_records('cohort_members', [
+            'cohortid' => $solentcohort->id,
+        ]);
+        $this->assertSame($countbefore + 1, $countafter);
+        $this->assertTrue(cohort_is_member($solentcohort->id, $newstudent->id));
 
         // Disable enrolment on one course - student still be enrolled on another,
         // so this won't affect the cohort membership.
@@ -232,17 +231,15 @@ final class location_cohort_sync_test extends \advanced_testcase {
             'enrolid' => $enrolinstance->id,
         ]);
         $this->assertEquals(ENROL_USER_SUSPENDED, $enrolment->status);
+        $countbefore = $DB->count_records('cohort_members', [
+            'cohortid' => $solentcohort->id,
+        ]);
         $task->execute();
-        // No changes.
-        $expectedoutput .= "Start processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n" .
-            "End processing for \"A really long * name for an institution that might " .
-                "get trimmed at some point, with some ! punctuation\" cohort\n" .
-            "Start processing for \"QAHE\" cohort\n" .
-            "End processing for \"QAHE\" cohort\n" .
-            "Start processing for \"Solent University\" cohort\n" .
-            "End processing for \"Solent University\" cohort\n";
-        $this->expectOutputString($expectedoutput);
+        $countafter = $DB->count_records('cohort_members', [
+            'cohortid' => $solentcohort->id,
+        ]);
+        $this->assertSame($countbefore, $countafter);
+        $this->assertTrue(cohort_is_member($solentcohort->id, $newstudent->id));
     }
 
     /**

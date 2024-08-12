@@ -44,7 +44,7 @@ final class location_cohort_sync_test extends \advanced_testcase {
         $this->setAdminUser();
         // This test sets up courses that fall into 3 locations.
         // Each location has courses for different semester patterns.
-        // Each location has courses set up from 2020/21 with up to 2 years in the future.
+        // Each location has courses set up from 2020/21 with a minimum of 2 years in the future.
         // Each course has 3 sets of 2 students, which roll on and off as the years progress.
         // This mimics student progression through their academic career.
         // 2020 [0, 1, 2]
@@ -122,6 +122,11 @@ final class location_cohort_sync_test extends \advanced_testcase {
                             if ($session == $currentsession) {
                                 $currentstudents[$location][$student->id] = $student;
                             }
+                            // This accounts for any spanning modules.
+                            $currentlyrunning = ($course->startdate <= time() && $course->enddate >= time());
+                            if ($currentlyrunning) {
+                                $currentstudents[$location][$student->id] = $student;
+                            }
                         }
                     }
                     $x++;
@@ -142,6 +147,10 @@ final class location_cohort_sync_test extends \advanced_testcase {
                 'component' => 'local_cohorts',
             ]);
             $this->assertEquals($cohort->name, get_string('studentcohort', 'local_cohorts', ['name' => $location]));
+            $cohortsize = $DB->count_records('cohort_members', [
+                'cohortid' => $cohort->id,
+            ]);
+            $this->assertCount($cohortsize, $currentstudents[$location]);
             foreach ($currentstudents[$location] as $currentstudent) {
                 $this->assertTrue(cohort_is_member($cohort->id, $currentstudent->id));
             }

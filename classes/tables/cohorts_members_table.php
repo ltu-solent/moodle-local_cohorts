@@ -65,9 +65,10 @@ class cohorts_members_table extends table_sql {
         $this->define_columns($columns);
         $this->define_headers($columnheadings);
         $this->define_baseurl(new moodle_url("/local/cohorts/members.php", ['cohortid' => $filters['cohortid']]));
-        $userfieldsapi = \core_user\fields::for_identity(context_system::instance(), false)->with_userpic();
+        $including = ['auth', 'username', 'institution', 'department', 'lastlogin'];
+        $userfieldsapi = \core_user\fields::for_identity(context_system::instance(), false)->with_name()->including(...$including);
         $userfields = $userfieldsapi->get_sql('u', false, '', $this->useridfield, false)->selects;
-        $fields = 'cm.id, cm.timeadded, u.auth, u.username, u.institution, u.lastlogin, ' . $userfields;
+        $fields = 'cm.id, cm.timeadded, ' . $userfields;
         $from = "{cohort_members} cm
             JOIN {user} u ON u.id = cm.userid";
         $where = 'cm.cohortid = :cohortid ORDER BY u.firstname, u.lastname';

@@ -41,11 +41,25 @@ class cohorts_members_table extends table_sql {
         $columns = [
             'id',
             'fullname',
+            'auth',
+            'username',
+            'email',
+            'idnumber',
+            'department',
+            'location',
+            'lastlogin',
         ];
 
         $columnheadings = [
             'id',
             new lang_string('fullname'),
+            new lang_string('authentication'),
+            new lang_string('username'),
+            new lang_string('email'),
+            new lang_string('idnumber'),
+            new lang_string('department'),
+            new lang_string('location'),
+            new lang_string('lastlogin'),
         ];
 
         $this->define_columns($columns);
@@ -53,12 +67,25 @@ class cohorts_members_table extends table_sql {
         $this->define_baseurl(new moodle_url("/local/cohorts/members.php", ['cohortid' => $filters['cohortid']]));
         $userfieldsapi = \core_user\fields::for_identity(context_system::instance(), false)->with_userpic();
         $userfields = $userfieldsapi->get_sql('u', false, '', $this->useridfield, false)->selects;
-        $fields = 'cm.id, cm.timeadded, ' . $userfields;
+        $fields = 'cm.id, cm.timeadded, u.auth, u.username, u.lastlogin, ' . $userfields;
         $from = "{cohort_members} cm
             JOIN {user} u ON u.id = cm.userid";
-        $where = 'cm.cohortid = :cohortid';
+        $where = 'cm.cohortid = :cohortid ORDER BY u.firstname, u.lastname';
         $this->set_sql($fields, $from, $where, [
             'cohortid' => $filters['cohortid'],
         ]);
+    }
+
+    /**
+     * Last login
+     *
+     * @param object $row
+     * @return string
+     */
+    public function col_lastlogin($row): string {
+        if ($row->lastlogin == 0) {
+            return get_string('never');
+        }
+        return userdate($row->lastlogin);
     }
 }

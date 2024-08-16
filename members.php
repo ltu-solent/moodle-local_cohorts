@@ -43,7 +43,7 @@ $url = new moodle_url('/local/cohorts/members.php', []);
 $PAGE->set_url($url);
 $PAGE->set_context($context);
 $PAGE->set_heading(get_string('viewingmembers', 'local_cohorts', $cohort->name));
-$PAGE->set_pagelayout('standard');
+$PAGE->set_pagelayout('admin');
 $PAGE->navbar->add(get_string('pluginname', 'local_cohorts'), new moodle_url('/local/cohorts/index.php'))
     ->add(get_string('viewmembersof', 'local_cohorts', format_string($cohort->name)));
 echo $OUTPUT->header();
@@ -51,7 +51,7 @@ echo $OUTPUT->header();
 $PAGE->set_title(get_string('viewingmembers', 'local_cohorts', format_string($cohort->name)));
 
 echo format_text($cohort->description);
-
+echo '<br />';
 $table = new cohorts_members_table('local_cohorts_cohorts_members', ['cohortid' => $cohortid]);
 $table->out(100, true);
 

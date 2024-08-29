@@ -79,8 +79,7 @@ class cohorts_table extends table_sql {
         $from = "{cohort} c
                 LEFT JOIN {local_cohorts_status} lcs ON lcs.cohortid = c.id
             ";
-            $where = "contextid = :contextid AND component = 'local_cohorts'
-            ORDER BY c.name ASC";
+            $where = "contextid = :contextid AND component = 'local_cohorts'";
 
         $this->set_sql($select, $from, $where, [
             'contextid' => context_system::instance()->id,

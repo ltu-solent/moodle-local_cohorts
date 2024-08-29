@@ -112,8 +112,12 @@ final class location_cohort_sync_test extends \advanced_testcase {
                     foreach ($studentmap[$session] as $index) {
                         if (!isset($students[$index][$location])) {
                             $shortlocation = substr(helper::slugify($location), 0, 35);
-                            $students[$index][$location][] = $dg->create_user(['username' => 'stud' . $index . $shortlocation . '1']);
-                            $students[$index][$location][] = $dg->create_user(['username' => 'stud' . $index . $shortlocation . '2']);
+                            $students[$index][$location][] = $dg->create_user([
+                                'username' => 'stud' . $index . $shortlocation . '1',
+                            ]);
+                            $students[$index][$location][] = $dg->create_user([
+                                'username' => 'stud' . $index . $shortlocation . '2',
+                            ]);
                         }
                     }
                     foreach ($studentmap[$session] as $index) {

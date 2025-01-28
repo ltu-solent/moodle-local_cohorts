@@ -30,14 +30,14 @@ use local_cohorts_generator;
  * @author Mark Sharp <mark.sharp@solent.ac.uk>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class helper_test extends \advanced_testcase {
+final class helper_test extends \advanced_testcase {
     /**
      * Update user department cohort memberships
      * @covers \local_cohorts\helper::update_user_department_cohort
      *
      * @return void
      */
-    public function test_update_user_department_cohort() {
+    public function test_update_user_department_cohort(): void {
         global $DB;
         $this->resetAfterTest();
         /** @var local_cohorts_generator $dg */
@@ -222,7 +222,7 @@ class helper_test extends \advanced_testcase {
      * @covers \local_cohorts\observers::user_created
      * @return void
      */
-    public function test_sync_user_profile_cohort($before, $after) {
+    public function test_sync_user_profile_cohort($before, $after): void {
         global $DB;
         $this->resetAfterTest();
         /** @var local_cohorts_generator $dg */
@@ -685,7 +685,7 @@ class helper_test extends \advanced_testcase {
      * @dataProvider adopt_a_cohort_provider
      * @return void
      */
-    public function test_adopt_a_cohort($cohort, $adopted, $enabled) {
+    public function test_adopt_a_cohort($cohort, $adopted, $enabled): void {
         global $DB;
         $this->resetAfterTest();
         $systemcontext = context_system::instance();
@@ -791,7 +791,7 @@ class helper_test extends \advanced_testcase {
      *
      * @return void
      */
-    public function test_migrate_cohorts() {
+    public function test_migrate_cohorts(): void {
         global $DB;
         $this->resetAfterTest();
         // I don't want events to trigger for this test.

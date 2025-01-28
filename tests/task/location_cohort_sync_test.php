@@ -36,7 +36,7 @@ final class location_cohort_sync_test extends \advanced_testcase {
      * @covers \local_cohort\task\local_cohort_sync
      * @return void
      */
-    public function test_execute() {
+    public function test_execute(): void {
         global $DB;
         $this->resetAfterTest();
         // Run the test as an admin user, because the customfield location_name is locked.

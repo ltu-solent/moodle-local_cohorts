@@ -35,13 +35,14 @@ use advanced_testcase;
  * @coversNothing
  * @group sol
  */
-class lib_test extends advanced_testcase {
+final class lib_test extends advanced_testcase {
     /**
      * {@inheritDoc}
      *
      * @return void
      */
     public function setUp(): void {
+        parent::setUp();
         $this->resetAfterTest();
     }
 
@@ -50,7 +51,7 @@ class lib_test extends advanced_testcase {
      *
      * @return void
      */
-    public function test_academic() {
+    public function test_academic(): void {
         global $DB;
         // Create cohort.
         $cohort = $this->getDataGenerator()->create_cohort([
@@ -106,7 +107,7 @@ class lib_test extends advanced_testcase {
      *
      * @return void
      */
-    public function test_support() {
+    public function test_support(): void {
         global $DB;
         // Create cohort.
         $cohort = $this->getDataGenerator()->create_cohort([
@@ -163,7 +164,7 @@ class lib_test extends advanced_testcase {
      *
      * @return void
      */
-    public function test_management() {
+    public function test_management(): void {
         global $DB;
         // Create cohort.
         $cohort = $this->getDataGenerator()->create_cohort([
@@ -220,7 +221,7 @@ class lib_test extends advanced_testcase {
      *
      * @return void
      */
-    public function test_mydevelopment() {
+    public function test_mydevelopment(): void {
         global $DB;
         // Create cohort.
         $cohort = $this->getDataGenerator()->create_cohort([
@@ -325,7 +326,7 @@ class lib_test extends advanced_testcase {
         // phpcs:enable
     }
 
-    public function test_student6() {
+    public function test_student6(): void {
         global $DB;
         $cohort = $this->getDataGenerator()->create_cohort([
             'name' => 'Six months',

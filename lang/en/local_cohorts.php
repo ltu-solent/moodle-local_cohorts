@@ -38,8 +38,8 @@ $string['disableconfirm'] = 'You are about to disable {$a}.<br /><strong>This wi
 $string['emailexcludepattern'] = 'Email exclude pattern';
 $string['emailexcludepattern_desc'] = 'Comma separated list of email patterns that are not included in the system cohorts. ' .
     'i.e. if the email address contains any of the text, it is excluded.';
-$string['enabled'] = 'Enabled';
 $string['enablecohort'] = 'Enable cohort {$a}';
+$string['enabled'] = 'Enabled';
 
 $string['hidecohort'] = 'Hide cohort';
 

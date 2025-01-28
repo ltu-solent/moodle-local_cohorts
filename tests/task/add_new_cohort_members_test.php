@@ -40,7 +40,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
      * @param string $expectedoutput from the task
      * @return void
      */
-    public function test_execute($before, $after, $expectedoutput) {
+    public function test_execute($before, $after, $expectedoutput): void {
         global $DB;
         /** @var local_cohorts_generator $dg */
         $dg = $this->getDataGenerator()->get_plugin_generator('local_cohorts');

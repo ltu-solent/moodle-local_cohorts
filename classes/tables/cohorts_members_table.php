@@ -66,7 +66,7 @@ class cohorts_members_table extends table_sql {
         $this->define_headers($columnheadings);
         $this->sortable(true, 'firstname');
         $this->define_baseurl(new moodle_url("/local/cohorts/members.php", ['cohortid' => $filters['cohortid']]));
-        $including = ['id', 'auth', 'username', 'institution', 'department', 'lastlogin'];
+        $including = ['id', 'auth', 'username', 'idnumber', 'institution', 'department', 'lastlogin'];
         $userfieldsapi = \core_user\fields::for_identity(context_system::instance(), false)->with_name()->including(...$including);
         $userfields = $userfieldsapi->get_sql('u', false, '', $this->useridfield, false)->selects;
         $fields = $userfields . ', cm.timeadded';

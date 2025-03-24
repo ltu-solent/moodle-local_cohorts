@@ -137,7 +137,7 @@ class cohorts_table extends table_sql {
             $actionmenu->add(new action_menu_link(
                 new moodle_url('/local/cohorts/edit.php', [
                     'id' => $row->id,
-                    'enable' => 0,
+                    'disable' => 1,
                     'returnurl' => $returnurl,
                     'sesskey' => sesskey(),
                 ]),

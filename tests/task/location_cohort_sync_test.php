@@ -57,7 +57,8 @@ final class location_cohort_sync_test extends \advanced_testcase {
         $dg = $this->getDataGenerator();
         $enrol = enrol_get_plugin('solaissits');
         $this->enable_plugin();
-        $this->setup_location_customfield();
+        $this->setup_customfield('location_name');
+        $this->setup_customfield('level_code');
         $locations = [
             'loc_a-really-long-name-for-an-institution-that-might-get-trimmed-at-some-point-with-some-punctua_stu' =>
                 'A really long * name for an institution that might get trimmed at some point, with some ! punctuation',
@@ -68,15 +69,18 @@ final class location_cohort_sync_test extends \advanced_testcase {
         // Start with oldest session first.
         $sessionmenu = array_reverse(helper::get_session_menu());
         $periods = [
-            'SEM1' => ['start' => 'YYYY-09-21', 'end' => '20YY-01-14'],
-            'SEM2' => ['start' => '20YY-01-21', 'end' => '20YY-05-14'],
-            'S1S2' => ['start' => 'YYYY-09-21', 'end' => '20YY-05-14'],
-            'INYR' => ['start' => 'YYYY-08-13', 'end' => 'YYYY-12-12'],
-            'SPAN1' => ['start' => '20YY-05-14', 'end' => '20YY-09-15'],
+            'SEM1' => ['start' => 'YYYY-09-21', 'end' => '20YY-01-14', 'level' => '03'],
+            'SEM2' => ['start' => '20YY-01-21', 'end' => '20YY-05-14', 'level' => '04'],
+            'S1S2' => ['start' => 'YYYY-09-21', 'end' => '20YY-05-14', 'level' => '05'],
+            'INYR' => ['start' => 'YYYY-08-13', 'end' => 'YYYY-12-12', 'level' => '06'],
+            'SPAN1' => ['start' => '20YY-05-14', 'end' => '20YY-09-15', 'level' => '07'],
         ];
         $courses = [];
         $students = [];
-        $currentstudents = [];
+        $currentstudents = [
+            'location' => [],
+            'loclevel' => [],
+        ];
         $studentindex = 0;
         $studentmap = [];
         $moduleleader = $dg->create_user();
@@ -103,6 +107,10 @@ final class location_cohort_sync_test extends \advanced_testcase {
                                 'shortname' => 'location_name',
                                 'value' => $location,
                             ],
+                            [
+                                'shortname' => 'level_code',
+                                'value' => $period['level'],
+                            ],
                         ],
                     ]);
                     $courses[$session][$periodkey][$locationkey] = $course;
@@ -124,12 +132,14 @@ final class location_cohort_sync_test extends \advanced_testcase {
                         foreach ($students[$index][$location] as $student) {
                             $dg->enrol_user($student->id, $course->id, 'student', 'solaissits');
                             if ($session == $currentsession) {
-                                $currentstudents[$location][$student->id] = $student;
+                                $currentstudents['location'][$location][$student->id] = $student;
+                                $currentstudents['loclevel'][$location . '+' . $period['level']][$student->id] = $student;
                             }
                             // This accounts for any spanning modules.
                             $currentlyrunning = ($course->startdate <= time() && $course->enddate >= time());
                             if ($currentlyrunning) {
-                                $currentstudents[$location][$student->id] = $student;
+                                $currentstudents['location'][$location][$student->id] = $student;
+                                $currentstudents['loclevel'][$location . '+' . $period['level']][$student->id] = $student;
                             }
                         }
                     }
@@ -154,9 +164,18 @@ final class location_cohort_sync_test extends \advanced_testcase {
             $cohortsize = $DB->count_records('cohort_members', [
                 'cohortid' => $cohort->id,
             ]);
-            $this->assertCount($cohortsize, $currentstudents[$location]);
-            foreach ($currentstudents[$location] as $currentstudent) {
+            $this->assertCount($cohortsize, $currentstudents['location'][$location]);
+            foreach ($currentstudents['location'][$location] as $currentstudent) {
                 $this->assertTrue(cohort_is_member($cohort->id, $currentstudent->id));
+            }
+            // Get level cohorts for location here.
+            foreach ($periods as $periodkey => $period) {
+                $level = $period['level'];
+                $loclevname = $location . ' level ' . $level . ' students';
+                [$loclevcohort, $loclevstatus] = helper::get_cohort($loclevname, '', $systemcontext);
+                foreach ($currentstudents['loclevel'][$location . '+' . $level] as $currentstudent) {
+                    $this->assertTrue(cohort_is_member($loclevcohort->id, $currentstudent->id));
+                }
             }
         }
         // Add a student to two Solent modules.
@@ -268,12 +287,12 @@ final class location_cohort_sync_test extends \advanced_testcase {
     }
 
     /**
-     * Set up the location name customfield, if required.
+     * Set up a customfield customfield, if required.
      *
+     * @param string $shortname
      * @return void
      */
-    protected function setup_location_customfield() {
-        $shortname = 'location_name';
+    protected function setup_customfield($shortname) {
         $category = category::get_record([
             'name' => 'Student Records System',
             'area' => 'course',
@@ -301,8 +320,8 @@ final class location_cohort_sync_test extends \advanced_testcase {
         $this->getDataGenerator()->create_custom_field([
             'categoryid' => $category->get('id'),
             'type' => 'text',
-            'shortname' => 'location_name',
-            'name' => 'Location',
+            'shortname' => $shortname,
+            'name' => ucwords(str_replace('_', ' ', $shortname)),
         ]);
     }
 }

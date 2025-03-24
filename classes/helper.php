@@ -17,6 +17,7 @@
 namespace local_cohorts;
 
 use context_system;
+use core_text;
 use core_user;
 use stdClass;
 
@@ -619,7 +620,7 @@ class helper {
      *
      * @param object $cohort Cohort object
      * @param bool $enabled Status of record
-     * @return object Status record
+     * @return stdClass Status record
      */
     public static function update_cohort_status($cohort, $enabled = true): object {
         global $DB, $USER;
@@ -640,5 +641,60 @@ class helper {
         }
         $status = $DB->get_record('local_cohorts_status', ['cohortid' => $cohort->id]);
         return $status;
+    }
+
+    /**
+     * Get cohort - or create it if it doesn't exist using the $name as the source of the idnumber.
+     *
+     * @param string $name
+     * @param string $description
+     * @param context $context
+     * @param string $prefix Added before the idnumber
+     * @param string $suffix Added after the idnumber
+     * @return array Returns cohort and status records.
+     */
+    public static function get_cohort($name, $description, $context, $prefix = '', $suffix = ''): array {
+        global $DB;
+        $prefixlength = strlen($prefix);
+        $suffixlength = strlen($suffix);
+        $extralength = $prefixlength + $suffixlength;
+        // Max length of idnumber is 100, this will shorten the name if it's too long, taking into account prefixes.
+        $slug = core_text::substr(self::slugify($name), 0, 100 - $extralength);
+        $idnumber = $prefix . $slug . $suffix;
+        $cohort = $DB->get_record('cohort', [
+            'idnumber' => $idnumber,
+            'contextid' => $context->id,
+            'component' => 'local_cohorts',
+        ]);
+
+        if ($cohort) {
+            $status = $DB->get_record('local_cohorts_status', ['cohortid' => $cohort->id]);
+            return [$cohort, $status];
+        }
+        $cohortid = cohort_add_cohort((object)[
+            'name' => $name,
+            'description' => $description,
+            'idnumber' => $idnumber,
+            'contextid' => $context->id,
+            'component' => 'local_cohorts',
+        ]);
+        $cohort = $DB->get_record('cohort', ['id' => $cohortid]);
+        // Enable the new cohort by default.
+        $status = self::update_cohort_status($cohort, true);
+        return [$cohort, $status];
+    }
+
+    /**
+     * Get members of specific cohort
+     *
+     * @param stdClass $cohort
+     * @return array
+     */
+    public static function get_members($cohort): array {
+        global $DB;
+        return $DB->get_records_sql("SELECT cm.userid, u.username
+                FROM {cohort_members} cm
+                JOIN {user} u ON u.id = cm.userid
+                WHERE cm.cohortid = :cohortid", ['cohortid' => $cohort->id]);
     }
 }

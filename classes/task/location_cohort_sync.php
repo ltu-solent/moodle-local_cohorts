@@ -38,6 +38,49 @@ require_once($CFG->dirroot . '/cohort/lib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class location_cohort_sync extends scheduled_task {
+
+    /**
+     * SITS category field
+     *
+     * @var category
+     */
+    private $category = null;
+
+    /**
+     * Current session e.g. 2024/25
+     *
+     * @var string
+     */
+    private $currentsession = '';
+
+    /**
+     * List of distinct levels
+     *
+     * @var array
+     */
+    private $levelcohorts = [];
+
+    /**
+     * Level custom field
+     *
+     * @var field
+     */
+    private $levelfield = null;
+
+    /**
+     * Location custom field
+     *
+     * @var field
+     */
+    private $locationfield = null;
+
+    /**
+     * Student role id
+     *
+     * @var int
+     */
+    private $studentroleid = null;
+
     /**
      * Get task name
      *
@@ -48,7 +91,7 @@ class location_cohort_sync extends scheduled_task {
     }
 
     /**
-     * Execute task
+     * Manage all location based cohorts
      *
      * @return void
      */
@@ -65,66 +108,39 @@ class location_cohort_sync extends scheduled_task {
          // - Need to capture Cross-sessional
          // - Take module enrolment status into consideration, but only if they don't
          // have any active enrolments in the current session.
+         // - Take into account academic levels too.
+         // Assuming there are levels 03,04,05 and the location "Southampton Solent University" you will get the following:
+         // - All Level 03 students
+         // - All Level 04 students
+         // - All Level 05 students
+         // - Southampton Solent University All levels
+         // - Southampton Solent University Level 03 Students
+         // - Southampton Solent University Level 04 Students
+         // - Southampton Solent University Level 05 Students.
 
-        $currentsession = helper::get_current_session();
+        $this->currentsession = helper::get_current_session();
 
-        $studentroleid = $DB->get_field('role', 'id', ['shortname' => 'student']);
+        $this->studentroleid = $DB->get_field('role', 'id', ['shortname' => 'student']);
 
-        // Get all possible locations - Process alphabetically.
-        $category = category::get_record([
-            'name' => 'Student Records System',
-            'area' => 'course',
-            'component' => 'core_course',
-        ]);
-        if (!$category) {
-            mtrace('Student Records System custom category not set up.');
+        if (!$this->validate_customfields()) {
             return;
         }
-        $field = field::get_record([
-            'shortname' => 'location_name',
-            'categoryid' => $category->get('id'),
-        ]);
-        if (!$field) {
-            mtrace('location_name custom field not set up');
-            return;
-        }
-        $sql = "SELECT DISTINCT(cfd.value) loc
-            FROM {customfield_data} cfd
-            WHERE cfd.fieldid = :fieldid
-                AND cfd.value != '' ORDER BY loc ASC";
-        $locations = $DB->get_records_sql($sql, ['fieldid' => $field->get('id')]);
-        $systemcontext = context_system::instance();
+        // All unique location and level values.
+        $locations = $this->get_field_data($this->locationfield->get('id'));
+        $levels = $this->get_field_data($this->levelfield->get('id'));
+        // Set up all top level Level cohorts.
+        $this->setup_level_cohorts($levels);
 
         foreach ($locations as $location) {
-            mtrace("Start processing for \"{$location->loc}\" cohort");
-            // Idnumber max length 100 loc_ and _stu is 8 chars.
-            $locationslug = core_text::substr(helper::slugify($location->loc), 0, 92);
-            $idnumber = 'loc_' . $locationslug . '_stu';
-            $cohort = $DB->get_record('cohort', [
-                'idnumber' => $idnumber,
-                'component' => 'local_cohorts',
-                'contextid' => $systemcontext->id,
-            ]);
-            // Create the location cohort if it doesn't already exist.
-            if (!$cohort) {
-                $cohort = new stdClass();
-                $cohort->idnumber = $idnumber;
-                $cohort->name = get_string('studentcohort', 'local_cohorts', ['name' => $location->loc]);
-                $cohort->description = get_string('locationcohortdescription', 'local_cohorts', ['name' => $cohort->name]);
-                $cohort->contextid = $systemcontext->id;
-                $cohort->component = 'local_cohorts';
-                $cohortid = cohort_add_cohort($cohort);
-                $cohort = $DB->get_record('cohort', ['id' => $cohortid]);
-                helper::update_cohort_status($cohort, true);
-            }
-            $currentmembers = $DB->get_records_sql("SELECT cm.userid, u.username
-                FROM {cohort_members} cm
-                JOIN {user} u ON u.id = cm.userid
-                WHERE cm.cohortid = :cohortid", ['cohortid' => $cohort->id]);
-            $cohortstatus = $DB->get_record('local_cohorts_status', ['cohortid' => $cohort->id]);
-            if (!$cohortstatus) {
-                $cohortstatus = helper::update_cohort_status($cohort, true);
-            }
+            mtrace("Start processing for \"{$location->value}\" cohort");
+            [$cohort, $cohortstatus] = $this->get_location_cohort($location);
+            $currentmembers = helper::get_members($cohort);
+            $prospectivemembers = [];
+            $locationcourses = $this->get_currently_running_courses_at($location);
+
+            // Create or get existing Location x Level cohorts.
+            $this->setup_loclevel_cohorts($location, $levels);
+
             if ($cohortstatus->enabled == 0) {
                 if (count($currentmembers) > 0) {
                     mtrace("The cohort \"{$cohort->name}\" has been disabled. Removing all users.");
@@ -132,42 +148,20 @@ class location_cohort_sync extends scheduled_task {
                         mtrace("- Removing {$existingmember->username}");
                         cohort_remove_member($cohort->id, $existingmember->userid);
                     }
+                    $currentmembers = [];
                 }
-                continue;
             }
-            $prospectivemembers = [];
-
-            // Get all currently running courseids for the given location.
-            $likesession = $DB->sql_like('c.shortname', ':session');
-            $sql = "SELECT cfd.instanceid courseid
-                FROM {customfield_data} cfd
-                JOIN {course} c on c.id = cfd.instanceid
-                WHERE cfd.fieldid = :fieldid
-                    AND cfd.value = :location
-                    AND ({$likesession}
-                        OR (c.startdate < :startdate AND c.enddate > :enddate))";
-            $locationcourses = $DB->get_records_sql($sql, [
-                'session' => '%\_' . $currentsession,
-                'startdate' => time(),
-                'enddate' => time(),
-                'location' => $location->loc,
-                'fieldid' => $field->get('id'),
-            ]);
 
             foreach ($locationcourses as $course) {
-                $coursecontext = context_course::instance($course->courseid);
-                $sql = "SELECT ra.userid, u.username, u.suspended, ue.status, ue.timestart, ue.timeend
-                    FROM {role_assignments} ra
-                    JOIN {user} u ON u.id = ra.userid
-                    JOIN {user_enrolments} ue ON ue.userid = ra.userid AND ue.enrolid = ra.itemid
-                    WHERE ra.contextid = :contextid
-                        AND ra.component = 'enrol_solaissits'
-                        AND ra.roleid = :roleid
-                        AND u.suspended = 0";
-                $students = $DB->get_records_sql($sql, [
-                    'contextid' => $coursecontext->id,
-                    'roleid' => $studentroleid,
-                ]);
+                $students = $this->get_course_students($course);
+                $coursehaslevel = !is_null($course->level);
+                if ($coursehaslevel) {
+                    $alllevelname = 'All level ' . $course->level . ' students';
+                    $alllevelslug = core_text::substr(helper::slugify($alllevelname), 0, 100);
+                    $loclevname = $location->value . ' level ' . $course->level . ' students';
+                    $loclevslug = core_text::substr(helper::slugify($loclevname), 0, 100);
+                }
+
                 foreach ($students as $student) {
                     if ($student->status != ENROL_USER_ACTIVE) {
                         // Not a prospective member for this module, but might be on another.
@@ -175,6 +169,18 @@ class location_cohort_sync extends scheduled_task {
                     }
                     if (!isset($prospectivemembers[$student->userid])) {
                         $prospectivemembers[$student->userid] = $student->username;
+                    }
+                    if ($coursehaslevel) {
+                        if (!isset($this->levelcohorts[$alllevelslug]['prospectivemembers'][$student->userid])) {
+                            if ($this->levelcohorts[$alllevelslug]['status']->enabled) {
+                                $this->levelcohorts[$alllevelslug]['prospectivemembers'][$student->userid] = $student->username;
+                            }
+                        }
+                        if (!isset($this->levelcohorts[$loclevslug]['prospectivemembers'][$student->userid])) {
+                            if ($this->levelcohorts[$loclevslug]['status']->enabled) {
+                                $this->levelcohorts[$loclevslug]['prospectivemembers'][$student->userid] = $student->username;
+                            }
+                        }
                     }
                 }
             }
@@ -191,8 +197,227 @@ class location_cohort_sync extends scheduled_task {
                 mtrace(" - Removing {$member->username}");
                 cohort_remove_member($cohort->id, $member->userid);
             }
-            mtrace("End processing for \"{$location->loc}\" cohort");
+            mtrace("End processing for \"{$location->value}\" cohort");
+        }
+        // Add any level & loc x level prospective members.
+        foreach ($this->levelcohorts as $loclevslug => $leveldata) {
+            mtrace("Processing members for {$leveldata['cohort']->name}");
+            foreach ($leveldata['prospectivemembers'] as $userid => $prospectivemember) {
+                if (isset($leveldata['currentmembers'][$userid])) {
+                    unset($leveldata['currentmembers'][$userid]);
+                } else {
+                    mtrace(" - Adding {$prospectivemember}");
+                    cohort_add_member($leveldata['cohort']->id, $userid);
+                }
+            }
+            // Remove any loc x level current members.
+            foreach ($leveldata['currentmembers'] as $userid => $member) {
+                mtrace(" - Removing {$member->username}");
+                cohort_remove_member($leveldata['cohort']->id, $userid);
+            }
+            mtrace("End processing members for {$leveldata['cohort']->name}");
         }
     }
 
+    /**
+     * Can't use get_cohort here because the idnumbers would mess up.
+     *
+     * @param stdClass $location
+     * @return array
+     */
+    private function get_location_cohort($location): array {
+        global $DB;
+        $systemcontext = context_system::instance();
+        // Can't use get_cohort here because the idnumbers would mess up.
+        // Idnumber max length 100 loc_ and _stu is 8 chars.
+        $locationslug = core_text::substr(helper::slugify($location->value), 0, 92);
+        $idnumber = 'loc_' . $locationslug . '_stu';
+        $cohort = $DB->get_record('cohort', [
+            'idnumber' => $idnumber,
+            'component' => 'local_cohorts',
+            'contextid' => $systemcontext->id,
+        ]);
+        // Create the location cohort if it doesn't already exist.
+        if (!$cohort) {
+            $cohort = new stdClass();
+            $cohort->idnumber = $idnumber;
+            $cohort->name = get_string('studentcohort', 'local_cohorts', ['name' => $location->value]);
+            $cohort->description = get_string('locationcohortdescription', 'local_cohorts', ['name' => $cohort->name]);
+            $cohort->contextid = $systemcontext->id;
+            $cohort->component = 'local_cohorts';
+            $cohortid = cohort_add_cohort($cohort);
+            $cohort = $DB->get_record('cohort', ['id' => $cohortid]);
+            helper::update_cohort_status($cohort, true);
+        }
+
+        $cohortstatus = $DB->get_record('local_cohorts_status', ['cohortid' => $cohort->id]);
+        if (!$cohortstatus) {
+            $cohortstatus = helper::update_cohort_status($cohort, true);
+        }
+        return [$cohort, $cohortstatus];
+    }
+
+    /**
+     * Get field data for fieldid
+     *
+     * @param id $fieldid
+     * @return array
+     */
+    private function get_field_data($fieldid): array {
+        global $DB;
+        $sql = "SELECT DISTINCT(cfd.value) value
+            FROM {customfield_data} cfd
+            WHERE cfd.fieldid = :fieldid
+                AND cfd.value != '' ORDER BY value ASC";
+        return $DB->get_records_sql($sql, ['fieldid' => $fieldid]);
+    }
+
+    /**
+     * Set up top level cohorts
+     *
+     * @param array $levels
+     * @return void
+     */
+    private function setup_level_cohorts($levels) {
+        $systemcontext = context_system::instance();
+        foreach ($levels as $level) {
+            $name = 'All level ' . $level->value . ' students';
+            $description = get_string('locationcohortdescription', 'local_cohorts', ['name' => $name]);
+            [$cohort, $status] = helper::get_cohort($name, $description, $systemcontext);
+            $this->levelcohorts[$cohort->idnumber] = [
+                'cohort' => $cohort,
+                'status' => $status,
+                'currentmembers' => helper::get_members($cohort),
+                'prospectivemembers' => [],
+            ];
+            if ($status->enabled == 0) {
+                if (count($this->levelcohorts[$cohort->idnumber]['currentmembers']) > 0) {
+                    mtrace("The cohort \"{$cohort->name}\" has been disabled. Removing all users.");
+                    foreach ($this->levelcohorts[$cohort->idnumber]['currentmembers'] as $existingmember) {
+                        mtrace("- Removing {$existingmember->username}");
+                        cohort_remove_member($cohort->id, $existingmember->userid);
+                    }
+                    $this->levelcohorts[$cohort->idnumber]['currentmembers'] = [];
+                }
+            }
+        }
+    }
+
+    /**
+     * Get sits enrolled students
+     *
+     * @param stdClass $course
+     * @return array
+     */
+    private function get_course_students($course): array {
+        global $DB;
+        $coursecontext = context_course::instance($course->courseid);
+        $sql = "SELECT ra.userid, u.username, u.suspended, ue.status, ue.timestart, ue.timeend
+            FROM {role_assignments} ra
+            JOIN {user} u ON u.id = ra.userid
+            JOIN {user_enrolments} ue ON ue.userid = ra.userid AND ue.enrolid = ra.itemid
+            WHERE ra.contextid = :contextid
+                AND ra.component = 'enrol_solaissits'
+                AND ra.roleid = :roleid
+                AND u.suspended = 0";
+        $students = $DB->get_records_sql($sql, [
+            'contextid' => $coursecontext->id,
+            'roleid' => $this->studentroleid,
+        ]);
+        return $students;
+    }
+
+    /**
+     * Get all currently running courses for given location
+     *
+     * @param stdClass $location
+     * @return array
+     */
+    private function get_currently_running_courses_at($location): array {
+        global $DB;
+        $likesession = $DB->sql_like('c.shortname', ':session');
+        $sql = "SELECT cfd.instanceid courseid, levelcfd.value level
+            FROM {customfield_data} cfd
+            JOIN {course} c on c.id = cfd.instanceid
+            LEFT JOIN {customfield_data} levelcfd ON levelcfd.fieldid = :levelfieldid AND levelcfd.instanceid = c.id
+            WHERE cfd.fieldid = :fieldid
+                AND cfd.value = :location
+                AND ({$likesession}
+                    OR (c.startdate < :startdate AND c.enddate > :enddate))";
+        $locationcourses = $DB->get_records_sql($sql, [
+            'session' => '%\_' . $this->currentsession,
+            'startdate' => time(),
+            'enddate' => time(),
+            'location' => $location->value,
+            'fieldid' => $this->locationfield->get('id'),
+            'levelfieldid' => $this->levelfield->get('id'),
+        ]);
+        return $locationcourses;
+    }
+
+    /**
+     * Given a location and a set of levels, set up cohorts, if not already creatd.
+     *
+     * @param stdClass $location
+     * @param array $levels
+     * @return void
+     */
+    private function setup_loclevel_cohorts($location, $levels) {
+        $systemcontext = context_system::instance();
+        foreach ($levels as $level) {
+            $loclevname = $location->value . ' level ' . $level->value . ' students';
+            $loclevdescription = get_string('locationcohortdescription', 'local_cohorts', ['name' => $loclevname]);
+            [$loclevcohort, $loclevstatus] = helper::get_cohort($loclevname, $loclevdescription, $systemcontext, '', '');
+            $this->levelcohorts[$loclevcohort->idnumber] = [
+                'cohort' => $loclevcohort,
+                'status' => $loclevstatus,
+                'currentmembers' => helper::get_members($loclevcohort),
+                'prospectivemembers' => [],
+            ];
+            if ($loclevstatus->enabled == 0) {
+                if (count($this->levelcohorts[$loclevcohort->idnumber]['currentmembers']) > 0) {
+                    mtrace("The cohort \"{$loclevcohort->name}\" has been disabled. Removing all users.");
+                    foreach ($this->levelcohorts[$loclevcohort->idnumber]['currentmembers'] as $existingmember) {
+                        mtrace("- Removing {$existingmember->username}");
+                        cohort_remove_member($loclevcohort->id, $existingmember->userid);
+                    }
+                    $this->levelcohorts[$loclevcohort->idnumber]['currentmembers'] = [];
+                }
+            }
+        }
+    }
+
+    /**
+     * Check required custom fields are set up
+     *
+     * @return bool
+     */
+    private function validate_customfields(): bool {
+        $this->category = category::get_record([
+            'name' => 'Student Records System',
+            'area' => 'course',
+            'component' => 'core_course',
+        ]);
+        if (!$this->category) {
+            mtrace('Student Records System custom category not set up.');
+            return false;
+        }
+        $this->locationfield = field::get_record([
+            'shortname' => 'location_name',
+            'categoryid' => $this->category->get('id'),
+        ]);
+        if (!$this->locationfield) {
+            mtrace('location_name custom field not set up');
+            return false;
+        }
+        $this->levelfield = field::get_record([
+            'shortname' => 'level_code',
+            'categoryid' => $this->category->get('id'),
+        ]);
+        if (!$this->levelfield) {
+            mtrace('level_code custom field not set up');
+            return false;
+        }
+        return true;
+    }
 }

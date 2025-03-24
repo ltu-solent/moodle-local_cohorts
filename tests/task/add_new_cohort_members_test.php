@@ -183,7 +183,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                         'inst_warsash-maritime-school',
                     ],
                 ],
-                'expected' => "Added teacherj academic  to Academic (academic)\n" .
+                'expectedoutput' => "Added teacherj academic  to Academic (academic)\n" .
                               "Added teacherj academic  to All Staff (all-staff)\n" .
                               "Added teacherj academic Warsash Maritime School to " .
                                 "Warsash Maritime School (inst_warsash-maritime-school)\n",
@@ -210,7 +210,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
-                'expected' => '',
+                'expectedoutput' => '',
             ],
             // Any username with academic in it isn't included.
             'consultant-ee-account-with-named-email' => [
@@ -232,7 +232,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
-                'expected' => '',
+                'expectedoutput' => '',
             ],
             // Any email with academic in it isn't included.
             'consultant-ee-account' => [
@@ -254,7 +254,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
-                'expected' => '',
+                'expectedoutput' => '',
             ],
             'solent_academic_suspended' => [
                 'before' => [
@@ -272,7 +272,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
-                'expected' => "Added username1 academic  to Academic (academic)\n" .
+                'expectedoutput' => "Added username1 academic  to Academic (academic)\n" .
                               "Added username1 academic  to All Staff (all-staff)\n" .
                               "Removed username1 from Academic (academic)\n" .
                               "Removed username1 from All Staff (all-staff)\n",
@@ -294,7 +294,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     ],
                     'ismember' => ['academic', 'all-staff'],
                 ],
-                'expected' => "Added username1 academic  to Academic (academic)\n" .
+                'expectedoutput' => "Added username1 academic  to Academic (academic)\n" .
                               "Added username1 academic  to All Staff (all-staff)\n",
             ],
             'solent_academic_deleted' => [
@@ -313,7 +313,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
-                'expected' => "Added username1 academic  to Academic (academic)\n" .
+                'expectedoutput' => "Added username1 academic  to Academic (academic)\n" .
                               "Added username1 academic  to All Staff (all-staff)\n",
             ],
             'support_jobshop' => [
@@ -330,7 +330,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
-                'expected' => '',
+                'expectedoutput' => '',
             ],
             'support_consultant' => [
                 'before' => [
@@ -346,7 +346,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
-                'expected' => '',
+                'expectedoutput' => '',
             ],
             // External email addresses aren't included.
             'external-email-even-with-ldap' => [
@@ -364,7 +364,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     'user' => [],
                     'ismember' => [],
                 ],
-                'expected' => '',
+                'expectedoutput' => '',
             ],
             'solent_academic_to_support' => [
                 'before' => [
@@ -381,7 +381,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     ],
                     'ismember' => ['support', 'all-staff'],
                 ],
-                'expected' => "Added username1 academic  to Academic (academic)\n" .
+                'expectedoutput' => "Added username1 academic  to Academic (academic)\n" .
                               "Added username1 academic  to All Staff (all-staff)\n" .
                               "Removed username1 from Academic (academic)\n" .
                               "Added username1 support  to Support (support)\n",
@@ -399,7 +399,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     'user' => [],
                     'ismember' => ['random'],
                 ],
-                'expected' => '',
+                'expectedoutput' => '',
             ],
             'student' => [
                 'before' => [
@@ -420,7 +420,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                         'student6',
                     ],
                 ],
-                'expected' => "Added username1 student  to Student (student)\n" .
+                'expectedoutput' => "Added username1 student  to Student (student)\n" .
                               "username1 added to 'student6' cohort\n",
             ],
             'student6-within-6-months' => [
@@ -451,7 +451,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                         'student',
                     ],
                 ],
-                'expected' => "Added 0studentj1 student  to Student (student)\n" .
+                'expectedoutput' => "Added 0studentj1 student  to Student (student)\n" .
                               "0studentj1 added to 'student6' cohort\n" .
                               "0studentj1 removed from 'student6' cohort\n",
             ],
@@ -480,7 +480,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
                     ],
                     'ismember' => [],
                 ],
-                'expected' => "Added 0studentj1 student  to Student (student)\n" .
+                'expectedoutput' => "Added 0studentj1 student  to Student (student)\n" .
                               "0studentj1 added to 'student6' cohort\n" .
                               "Removed 0studentj1 from Student (student)\n" .
                               "0studentj1 removed from 'student6' cohort\n",

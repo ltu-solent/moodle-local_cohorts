@@ -154,11 +154,11 @@ class location_cohort_sync extends scheduled_task {
 
             foreach ($locationcourses as $course) {
                 $students = $this->get_course_students($course);
-                $coursehaslevel = !is_null($course->level);
+                $coursehaslevel = !is_null($course->alevel);
                 if ($coursehaslevel) {
-                    $alllevelname = 'All level ' . $course->level . ' students';
+                    $alllevelname = 'All level ' . $course->alevel . ' students';
                     $alllevelslug = core_text::substr(helper::slugify($alllevelname), 0, 100);
-                    $loclevname = $location->value . ' level ' . $course->level . ' students';
+                    $loclevname = $location->value . ' level ' . $course->alevel . ' students';
                     $loclevslug = core_text::substr(helper::slugify($loclevname), 0, 100);
                 }
 
@@ -336,7 +336,7 @@ class location_cohort_sync extends scheduled_task {
     private function get_currently_running_courses_at($location): array {
         global $DB;
         $likesession = $DB->sql_like('c.shortname', ':session');
-        $sql = "SELECT cfd.instanceid courseid, levelcfd.value level
+        $sql = "SELECT cfd.instanceid courseid, levelcfd.value alevel
             FROM {customfield_data} cfd
             JOIN {course} c on c.id = cfd.instanceid
             LEFT JOIN {customfield_data} levelcfd ON levelcfd.fieldid = :levelfieldid AND levelcfd.instanceid = c.id

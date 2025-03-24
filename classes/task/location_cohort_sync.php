@@ -132,7 +132,7 @@ class location_cohort_sync extends scheduled_task {
         $this->setup_level_cohorts($levels);
 
         foreach ($locations as $location) {
-            mtrace("Start processing for \"{$location->value}\" cohort");
+            mtrace("Start processing for \"{$location->fvalue}\" cohort");
             [$cohort, $cohortstatus] = $this->get_location_cohort($location);
             $currentmembers = helper::get_members($cohort);
             $prospectivemembers = [];
@@ -158,7 +158,7 @@ class location_cohort_sync extends scheduled_task {
                 if ($coursehaslevel) {
                     $alllevelname = 'All level ' . $course->alevel . ' students';
                     $alllevelslug = core_text::substr(helper::slugify($alllevelname), 0, 100);
-                    $loclevname = $location->value . ' level ' . $course->alevel . ' students';
+                    $loclevname = $location->fvalue . ' level ' . $course->alevel . ' students';
                     $loclevslug = core_text::substr(helper::slugify($loclevname), 0, 100);
                 }
 
@@ -197,7 +197,7 @@ class location_cohort_sync extends scheduled_task {
                 mtrace(" - Removing {$member->username}");
                 cohort_remove_member($cohort->id, $member->userid);
             }
-            mtrace("End processing for \"{$location->value}\" cohort");
+            mtrace("End processing for \"{$location->fvalue}\" cohort");
         }
         // Add any level & loc x level prospective members.
         foreach ($this->levelcohorts as $loclevslug => $leveldata) {
@@ -230,7 +230,7 @@ class location_cohort_sync extends scheduled_task {
         $systemcontext = context_system::instance();
         // Can't use get_cohort here because the idnumbers would mess up.
         // Idnumber max length 100 loc_ and _stu is 8 chars.
-        $locationslug = core_text::substr(helper::slugify($location->value), 0, 92);
+        $locationslug = core_text::substr(helper::slugify($location->fvalue), 0, 92);
         $idnumber = 'loc_' . $locationslug . '_stu';
         $cohort = $DB->get_record('cohort', [
             'idnumber' => $idnumber,
@@ -241,7 +241,7 @@ class location_cohort_sync extends scheduled_task {
         if (!$cohort) {
             $cohort = new stdClass();
             $cohort->idnumber = $idnumber;
-            $cohort->name = get_string('studentcohort', 'local_cohorts', ['name' => $location->value]);
+            $cohort->name = get_string('studentcohort', 'local_cohorts', ['name' => $location->fvalue]);
             $cohort->description = get_string('locationcohortdescription', 'local_cohorts', ['name' => $cohort->name]);
             $cohort->contextid = $systemcontext->id;
             $cohort->component = 'local_cohorts';
@@ -265,7 +265,7 @@ class location_cohort_sync extends scheduled_task {
      */
     private function get_field_data($fieldid): array {
         global $DB;
-        $sql = "SELECT DISTINCT(cfd.value) value
+        $sql = "SELECT DISTINCT(cfd.value) fvalue
             FROM {customfield_data} cfd
             WHERE cfd.fieldid = :fieldid
                 AND cfd.value != '' ORDER BY value ASC";
@@ -281,7 +281,7 @@ class location_cohort_sync extends scheduled_task {
     private function setup_level_cohorts($levels) {
         $systemcontext = context_system::instance();
         foreach ($levels as $level) {
-            $name = 'All level ' . $level->value . ' students';
+            $name = 'All level ' . $level->fvalue . ' students';
             $description = get_string('locationcohortdescription', 'local_cohorts', ['name' => $name]);
             [$cohort, $status] = helper::get_cohort($name, $description, $systemcontext);
             $this->levelcohorts[$cohort->idnumber] = [
@@ -348,7 +348,7 @@ class location_cohort_sync extends scheduled_task {
             'session' => '%\_' . $this->currentsession,
             'startdate' => time(),
             'enddate' => time(),
-            'location' => $location->value,
+            'location' => $location->fvalue,
             'fieldid' => $this->locationfield->get('id'),
             'levelfieldid' => $this->levelfield->get('id'),
         ]);
@@ -365,7 +365,7 @@ class location_cohort_sync extends scheduled_task {
     private function setup_loclevel_cohorts($location, $levels) {
         $systemcontext = context_system::instance();
         foreach ($levels as $level) {
-            $loclevname = $location->value . ' level ' . $level->value . ' students';
+            $loclevname = $location->fvalue . ' level ' . $level->fvalue . ' students';
             $loclevdescription = get_string('locationcohortdescription', 'local_cohorts', ['name' => $loclevname]);
             [$loclevcohort, $loclevstatus] = helper::get_cohort($loclevname, $loclevdescription, $systemcontext, '', '');
             $this->levelcohorts[$loclevcohort->idnumber] = [

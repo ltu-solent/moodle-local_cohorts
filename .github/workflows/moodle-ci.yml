@@ -62,7 +62,7 @@ jobs:
 
       - name: Install moodle-plugin-ci
         run: |
-          moodle-plugin-ci add-plugin --branch main ltu-solent/moodle-enrol_solaissits
+          moodle-plugin-ci add-plugin --branch MOODLE_401_STABLE ltu-solent/moodle-enrol_solaissits
           moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
         env:
           DB: ${{ matrix.database }}

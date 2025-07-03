@@ -82,6 +82,20 @@ class location_cohort_sync extends scheduled_task {
     private $studentroleid = null;
 
     /**
+     * Skip cohort
+     *
+     * @var array
+     */
+    private $skip = [];
+
+    /**
+     * Skip level processing
+     *
+     * @var bool
+     */
+    public $skiplevel = true;
+
+    /**
      * Get task name
      *
      * @return string
@@ -122,14 +136,18 @@ class location_cohort_sync extends scheduled_task {
 
         $this->studentroleid = $DB->get_field('role', 'id', ['shortname' => 'student']);
 
+        // May create setting for this when it's working properly.
+        $this->skiplevel = true;
         if (!$this->validate_customfields()) {
             return;
         }
         // All unique location and level values.
         $locations = $this->get_field_data($this->locationfield->get('id'));
-        $levels = $this->get_field_data($this->levelfield->get('id'));
-        // Set up all top level Level cohorts.
-        $this->setup_level_cohorts($levels);
+        if (!$this->skiplevel) {
+            $levels = $this->get_field_data($this->levelfield->get('id'));
+            // Set up all top level Level cohorts.
+            $this->setup_level_cohorts($levels);
+        }
 
         foreach ($locations as $location) {
             mtrace("Start processing for \"{$location->fvalue}\" cohort");
@@ -138,8 +156,10 @@ class location_cohort_sync extends scheduled_task {
             $prospectivemembers = [];
             $locationcourses = $this->get_currently_running_courses_at($location);
 
-            // Create or get existing Location x Level cohorts.
-            $this->setup_loclevel_cohorts($location, $levels);
+            if (!$this->skiplevel) {
+                // Create or get existing Location x Level cohorts.
+                $this->setup_loclevel_cohorts($location, $levels);
+            }
 
             if ($cohortstatus->enabled == 0) {
                 if (count($currentmembers) > 0) {
@@ -148,14 +168,15 @@ class location_cohort_sync extends scheduled_task {
                         mtrace("- Removing {$existingmember->username}");
                         cohort_remove_member($cohort->id, $existingmember->userid);
                     }
-                    $currentmembers = [];
                 }
+                $currentmembers = [];
+                $this->skip[$location->fvalue] = true;
             }
 
             foreach ($locationcourses as $course) {
                 $students = $this->get_course_students($course);
                 $coursehaslevel = !is_null($course->alevel);
-                if ($coursehaslevel) {
+                if ($coursehaslevel && !$this->skiplevel) {
                     $alllevelname = 'All level ' . $course->alevel . ' students';
                     $alllevelslug = core_text::substr(helper::slugify($alllevelname), 0, 100);
                     $loclevname = $location->fvalue . ' level ' . $course->alevel . ' students';
@@ -167,16 +188,18 @@ class location_cohort_sync extends scheduled_task {
                         // Not a prospective member for this module, but might be on another.
                         continue;
                     }
-                    if (!isset($prospectivemembers[$student->userid])) {
+                    if (!isset($prospectivemembers[$student->userid]) && !isset($this->skip[$location->fvalue])) {
                         $prospectivemembers[$student->userid] = $student->username;
                     }
-                    if ($coursehaslevel) {
-                        if (!isset($this->levelcohorts[$alllevelslug]['prospectivemembers'][$student->userid])) {
+                    if ($coursehaslevel && !$this->skiplevel) {
+                        if (!isset($this->levelcohorts[$alllevelslug]['prospectivemembers'][$student->userid]) &&
+                            !isset($this->skip[$alllevelslug])) {
                             if ($this->levelcohorts[$alllevelslug]['status']->enabled) {
                                 $this->levelcohorts[$alllevelslug]['prospectivemembers'][$student->userid] = $student->username;
                             }
                         }
-                        if (!isset($this->levelcohorts[$loclevslug]['prospectivemembers'][$student->userid])) {
+                        if (!isset($this->levelcohorts[$loclevslug]['prospectivemembers'][$student->userid]) &&
+                            !isset($this->skip[$loclevslug])) {
                             if ($this->levelcohorts[$loclevslug]['status']->enabled) {
                                 $this->levelcohorts[$loclevslug]['prospectivemembers'][$student->userid] = $student->username;
                             }
@@ -297,8 +320,9 @@ class location_cohort_sync extends scheduled_task {
                         mtrace("- Removing {$existingmember->username}");
                         cohort_remove_member($cohort->id, $existingmember->userid);
                     }
-                    $this->levelcohorts[$cohort->idnumber]['currentmembers'] = [];
                 }
+                $this->levelcohorts[$cohort->idnumber]['currentmembers'] = [];
+                $this->skip[$cohort->idnumber] = true;
             }
         }
     }

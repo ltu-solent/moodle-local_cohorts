@@ -169,15 +169,47 @@ final class location_cohort_sync_test extends \advanced_testcase {
                 $this->assertTrue(cohort_is_member($cohort->id, $currentstudent->id));
             }
             // Get level cohorts for location here.
-            foreach ($periods as $periodkey => $period) {
-                $level = $period['level'];
-                $loclevname = $location . ' level ' . $level . ' students';
-                [$loclevcohort, $loclevstatus] = helper::get_cohort($loclevname, '', $systemcontext);
-                foreach ($currentstudents['loclevel'][$location . '+' . $level] as $currentstudent) {
-                    $this->assertTrue(cohort_is_member($loclevcohort->id, $currentstudent->id));
+            if (!$task->skiplevel) {
+                foreach ($periods as $periodkey => $period) {
+                    $level = $period['level'];
+                    $loclevname = $location . ' level ' . $level . ' students';
+                    [$loclevcohort, $loclevstatus] = helper::get_cohort($loclevname, '', $systemcontext);
+                    foreach ($currentstudents['loclevel'][$location . '+' . $level] as $currentstudent) {
+                        $this->assertTrue(cohort_is_member($loclevcohort->id, $currentstudent->id));
+                    }
                 }
             }
         }
+
+        // Check yo-yo enrolments don't happen - run the task again, and make sure no enrolments have changed.
+        $task->execute();
+        foreach ($locations as $lokey => $location) {
+            $cohort = $DB->get_record('cohort', [
+                'idnumber' => $lokey,
+                'contextid' => $systemcontext->id,
+                'component' => 'local_cohorts',
+            ]);
+            $this->assertEquals($cohort->name, get_string('studentcohort', 'local_cohorts', ['name' => $location]));
+            $cohortsize = $DB->count_records('cohort_members', [
+                'cohortid' => $cohort->id,
+            ]);
+            $this->assertCount($cohortsize, $currentstudents['location'][$location]);
+            foreach ($currentstudents['location'][$location] as $currentstudent) {
+                $this->assertTrue(cohort_is_member($cohort->id, $currentstudent->id));
+            }
+            // Get level cohorts for location here.
+            if (!$task->skiplevel) {
+                foreach ($periods as $periodkey => $period) {
+                    $level = $period['level'];
+                    $loclevname = $location . ' level ' . $level . ' students';
+                    [$loclevcohort, $loclevstatus] = helper::get_cohort($loclevname, '', $systemcontext);
+                    foreach ($currentstudents['loclevel'][$location . '+' . $level] as $currentstudent) {
+                        $this->assertTrue(cohort_is_member($loclevcohort->id, $currentstudent->id));
+                    }
+                }
+            }
+        }
+
         // Add a student to two Solent modules.
         $newstudent = $dg->create_user();
         $dg->enrol_user(

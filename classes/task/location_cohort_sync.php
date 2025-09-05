@@ -38,7 +38,6 @@ require_once($CFG->dirroot . '/cohort/lib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class location_cohort_sync extends scheduled_task {
-
     /**
      * SITS category field
      *
@@ -192,14 +191,18 @@ class location_cohort_sync extends scheduled_task {
                         $prospectivemembers[$student->userid] = $student->username;
                     }
                     if ($coursehaslevel && !$this->skiplevel) {
-                        if (!isset($this->levelcohorts[$alllevelslug]['prospectivemembers'][$student->userid]) &&
-                            !isset($this->skip[$alllevelslug])) {
+                        if (
+                            !isset($this->levelcohorts[$alllevelslug]['prospectivemembers'][$student->userid]) &&
+                            !isset($this->skip[$alllevelslug])
+                        ) {
                             if ($this->levelcohorts[$alllevelslug]['status']->enabled) {
                                 $this->levelcohorts[$alllevelslug]['prospectivemembers'][$student->userid] = $student->username;
                             }
                         }
-                        if (!isset($this->levelcohorts[$loclevslug]['prospectivemembers'][$student->userid]) &&
-                            !isset($this->skip[$loclevslug])) {
+                        if (
+                            !isset($this->levelcohorts[$loclevslug]['prospectivemembers'][$student->userid]) &&
+                            !isset($this->skip[$loclevslug])
+                        ) {
                             if ($this->levelcohorts[$loclevslug]['status']->enabled) {
                                 $this->levelcohorts[$loclevslug]['prospectivemembers'][$student->userid] = $student->username;
                             }

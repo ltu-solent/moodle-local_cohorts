@@ -28,7 +28,7 @@ namespace local_cohorts\task;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->dirroot.'/local/cohorts/lib.php');
+require_once($CFG->dirroot . '/local/cohorts/lib.php');
 
 use context_system;
 use local_cohorts\helper;

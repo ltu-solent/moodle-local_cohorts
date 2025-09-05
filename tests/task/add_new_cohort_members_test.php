@@ -61,11 +61,13 @@ final class add_new_cohort_members_test extends \advanced_testcase {
             'Science and Engineering',
         ];
         foreach ($deptcohorts as $dept) {
-            if (!$DB->record_exists('cohort', [
+            if (
+                !$DB->record_exists('cohort', [
                     'idnumber' => $dept,
                     'contextid' => $systemcontext->id,
                     'component' => 'local_cohorts',
-                ])) {
+                ])
+            ) {
                 $dg->add_managed_cohort([
                     'name' => ucwords($dept),
                     'idnumber' => $dept,

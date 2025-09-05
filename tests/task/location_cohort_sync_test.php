@@ -278,7 +278,8 @@ final class location_cohort_sync_test extends \advanced_testcase {
 
         // Disable enrolment on one course - student still be enrolled on another,
         // so this won't affect the cohort membership.
-        $dg->enrol_user($newstudent->id,
+        $dg->enrol_user(
+            $newstudent->id,
             $courses[$currentsession]['SEM1']['loc_solent-university_stu']->id,
             'student',
             'solaissits',

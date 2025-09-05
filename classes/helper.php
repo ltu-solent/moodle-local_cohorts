@@ -163,7 +163,7 @@ class helper {
         $potentialmembers = $DB->get_records_select('user', $select, $params);
         foreach ($potentialmembers as $userid => $potentialmember) {
             // If potential member isn't in existing members list, add them.
-            $ismember = array_filter($existingmembers, function($member) use ($userid) {
+            $ismember = array_filter($existingmembers, function ($member) use ($userid) {
                 return $userid == $member->userid;
             });
             if (empty($ismember)) {
@@ -255,7 +255,7 @@ class helper {
 
         foreach ($potentialmembers as $userid => $potentialmember) {
             // If potential member isn't in existing members list, add them.
-            $ismember = array_filter($existingmembers, function($member) use ($userid) {
+            $ismember = array_filter($existingmembers, function ($member) use ($userid) {
                 return $userid == $member->userid;
             });
             if (empty($ismember)) {
@@ -272,7 +272,6 @@ class helper {
             cohort_remove_member($cohort->id, $userid);
             mtrace("Removed {$existingmember->username} from {$cohort->name} ({$cohort->idnumber})");
         }
-
     }
 
     /**

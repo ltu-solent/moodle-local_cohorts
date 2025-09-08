@@ -22,6 +22,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\lang_string;
+
 defined('MOODLE_INTERNAL') || die();
 
 $page = new admin_settingpage('local_cohorts_system', new lang_string('systemcohorts', 'local_cohorts'));

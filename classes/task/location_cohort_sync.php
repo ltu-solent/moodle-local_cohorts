@@ -16,8 +16,7 @@
 
 namespace local_cohorts\task;
 
-use context_course;
-use context_system;
+use core\context;
 use core\task\scheduled_task;
 use core_customfield\category;
 use core_customfield\field;
@@ -253,7 +252,7 @@ class location_cohort_sync extends scheduled_task {
      */
     private function get_location_cohort($location): array {
         global $DB;
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         // Can't use get_cohort here because the idnumbers would mess up.
         // Idnumber max length 100 loc_ and _stu is 8 chars.
         $locationslug = core_text::substr(helper::slugify($location->fvalue), 0, 92);
@@ -305,7 +304,7 @@ class location_cohort_sync extends scheduled_task {
      * @return void
      */
     private function setup_level_cohorts($levels) {
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         foreach ($levels as $level) {
             $name = 'All level ' . $level->fvalue . ' students';
             $description = get_string('locationcohortdescription', 'local_cohorts', ['name' => $name]);
@@ -338,7 +337,7 @@ class location_cohort_sync extends scheduled_task {
      */
     private function get_course_students($course): array {
         global $DB;
-        $coursecontext = context_course::instance($course->courseid);
+        $coursecontext = context\course::instance($course->courseid);
         $sql = "SELECT ra.userid, u.username, u.suspended, ue.status, ue.timestart, ue.timeend
             FROM {role_assignments} ra
             JOIN {user} u ON u.id = ra.userid
@@ -390,7 +389,7 @@ class location_cohort_sync extends scheduled_task {
      * @return void
      */
     private function setup_loclevel_cohorts($location, $levels) {
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         foreach ($levels as $level) {
             $loclevname = $location->fvalue . ' level ' . $level->fvalue . ' students';
             $loclevdescription = get_string('locationcohortdescription', 'local_cohorts', ['name' => $loclevname]);

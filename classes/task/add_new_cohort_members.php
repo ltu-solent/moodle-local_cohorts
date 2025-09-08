@@ -30,14 +30,14 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/local/cohorts/lib.php');
 
-use context_system;
+use core\context;
+use core\task\scheduled_task;
 use local_cohorts\helper;
-use stdClass;
 
 /**
  * Add new cohort members
  */
-class add_new_cohort_members extends \core\task\scheduled_task {
+class add_new_cohort_members extends scheduled_task {
     /**
      * {@inheritDoc}
      *
@@ -54,7 +54,7 @@ class add_new_cohort_members extends \core\task\scheduled_task {
      */
     public function execute() {
         global $DB;
-        $context = context_system::instance();
+        $context = context\system::instance();
         // Note: this function does require that the cohort already exists, and will not create a new cohort on the fly.
         $cohorts = $DB->get_records('cohort', ['contextid' => $context->id, 'component' => 'local_cohorts']);
         foreach ($cohorts as $cohort) {

@@ -16,10 +16,10 @@
 
 namespace local_cohorts\tables;
 
-use context_system;
-use lang_string;
-use moodle_url;
-use table_sql;
+use core\context;
+use core\lang_string;
+use core\url;
+use core_table\sql_table;
 
 /**
  * Class cohorts_members_table
@@ -28,7 +28,7 @@ use table_sql;
  * @copyright  2024 Solent University {@link https://www.solent.ac.uk}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class cohorts_members_table extends table_sql {
+class cohorts_members_table extends sql_table {
     /**
      * Constructor
      *
@@ -65,9 +65,9 @@ class cohorts_members_table extends table_sql {
         $this->define_columns($columns);
         $this->define_headers($columnheadings);
         $this->sortable(true, 'firstname');
-        $this->define_baseurl(new moodle_url("/local/cohorts/members.php", ['cohortid' => $filters['cohortid']]));
+        $this->define_baseurl(new url("/local/cohorts/members.php", ['cohortid' => $filters['cohortid']]));
         $including = ['id', 'auth', 'username', 'idnumber', 'institution', 'department', 'lastlogin'];
-        $userfieldsapi = \core_user\fields::for_identity(context_system::instance(), false)->with_name()->including(...$including);
+        $userfieldsapi = \core_user\fields::for_identity(context\system::instance(), false)->with_name()->including(...$including);
         $userfields = $userfieldsapi->get_sql('u', false, '', $this->useridfield, false)->selects;
         $fields = $userfields . ', cm.timeadded';
         $from = "{cohort_members} cm

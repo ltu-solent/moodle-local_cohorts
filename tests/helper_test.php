@@ -16,9 +16,8 @@
 
 namespace local_cohorts;
 
-use context_coursecat;
-use context_system;
-use Exception;
+use advanced_testcase;
+use core\context;
 use local_cohorts_generator;
 
 /**
@@ -30,7 +29,7 @@ use local_cohorts_generator;
  * @author Mark Sharp <mark.sharp@solent.ac.uk>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class helper_test extends \advanced_testcase {
+final class helper_test extends advanced_testcase {
     /**
      * Update user department cohort memberships
      * @covers \local_cohorts\helper::update_user_department_cohort
@@ -42,7 +41,7 @@ final class helper_test extends \advanced_testcase {
         $this->resetAfterTest();
         /** @var local_cohorts_generator $dg */
         $dg = $this->getDataGenerator()->get_plugin_generator('local_cohorts');
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         // I don't want events to trigger for this test.
         $sink = $this->redirectEvents();
         // Create users for each department.
@@ -227,7 +226,7 @@ final class helper_test extends \advanced_testcase {
         $this->resetAfterTest();
         /** @var local_cohorts_generator $dg */
         $dg = $this->getDataGenerator()->get_plugin_generator('local_cohorts');
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         $supportaccounts = ['academic', 'consultant', 'jobshop'];
         set_config('staffcohorts', 'academic,management,support', 'local_cohorts');
         set_config('emailexcludepattern', join(',', $supportaccounts), 'local_cohorts');
@@ -688,9 +687,9 @@ final class helper_test extends \advanced_testcase {
     public function test_adopt_a_cohort($cohort, $adopted, $enabled): void {
         global $DB;
         $this->resetAfterTest();
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         $cat = $this->getDataGenerator()->create_category();
-        $catccontext = context_coursecat::instance($cat->id);
+        $catccontext = context\coursecat::instance($cat->id);
         switch ($cohort['contextid']) {
             case 'catcontext':
                 $cohort['contextid'] = $catccontext->id;
@@ -796,7 +795,7 @@ final class helper_test extends \advanced_testcase {
         $this->resetAfterTest();
         // I don't want events to trigger for this test.
         $this->redirectEvents();
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         $cohorts = [];
         // No migration: Incorrect description.
         $cohorts['system'] = $this->getDataGenerator()->create_cohort([

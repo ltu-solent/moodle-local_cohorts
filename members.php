@@ -22,6 +22,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\context;
+use core\url;
 use local_cohorts\tables\cohorts_members_table;
 
 require('../../config.php');
@@ -32,19 +34,19 @@ require_once($CFG->libdir . '/adminlib.php');
 
 admin_externalpage_setup('local_cohorts_cohorts');
 
-$context = context_system::instance();
+$context = context\system::instance();
 require_capability('moodle/cohort:manage', $context);
 
 $cohortid = required_param('cohortid', PARAM_INT);
 $cohort = $DB->get_record('cohort', ['id' => $cohortid, 'component' => 'local_cohorts', 'contextid' => $context->id]);
 
 
-$url = new moodle_url('/local/cohorts/members.php', []);
+$url = new url('/local/cohorts/members.php', []);
 $PAGE->set_url($url);
 $PAGE->set_context($context);
 $PAGE->set_heading(get_string('viewingmembers', 'local_cohorts', $cohort->name));
 $PAGE->set_pagelayout('admin');
-$PAGE->navbar->add(get_string('pluginname', 'local_cohorts'), new moodle_url('/local/cohorts/index.php'))
+$PAGE->navbar->add(get_string('pluginname', 'local_cohorts'), new url('/local/cohorts/index.php'))
     ->add(get_string('viewmembersof', 'local_cohorts', format_string($cohort->name)));
 echo $OUTPUT->header();
 

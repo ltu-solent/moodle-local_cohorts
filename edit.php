@@ -22,6 +22,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\context;
+use core\url;
 use local_cohorts\helper;
 
 require('../../config.php');
@@ -45,13 +47,13 @@ $status = $DB->get_record('local_cohorts_status', ['cohortid' => $cohort->id]);
 require_capability('moodle/cohort:manage', $context);
 
 $PAGE->set_context($context);
-$baseurl = new moodle_url('/local/cohorts/edit.php', ['id' => $cohort->id]);
+$baseurl = new url('/local/cohorts/edit.php', ['id' => $cohort->id]);
 $PAGE->set_url($baseurl);
 
 if ($returnurl) {
-    $returnurl = new moodle_url($returnurl);
+    $returnurl = new url($returnurl);
 } else {
-    $returnurl = new moodle_url('/local/cohorts/index.php');
+    $returnurl = new url('/local/cohorts/index.php');
 }
 
 // We're only going to manage our own cohorts.
@@ -94,7 +96,7 @@ if ($disable && $cohort->id) {
     $PAGE->set_title($strheading);
     echo $OUTPUT->header();
     echo $OUTPUT->heading($strheading);
-    $yesurl = new moodle_url('/local/cohorts/edit.php', [
+    $yesurl = new url('/local/cohorts/edit.php', [
         'id' => $cohort->id,
         'disable' => 1,
         'confirm' => 1,
@@ -116,7 +118,7 @@ if ($delete && $cohort->id) {
     $PAGE->set_title($strheading);
     echo $OUTPUT->header();
     echo $OUTPUT->heading($strheading);
-    $yesurl = new moodle_url('/local/cohorts/edit.php', [
+    $yesurl = new url('/local/cohorts/edit.php', [
         'id' => $cohort->id,
         'delete' => 1,
         'confirm' => 1,

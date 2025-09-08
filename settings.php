@@ -23,6 +23,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\url;
+
  defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
@@ -34,6 +36,6 @@ if ($hassiteconfig) {
     $ADMIN->add('accounts', new admin_externalpage(
         'local_cohorts_cohorts',
         get_string('pluginname', 'local_cohorts'),
-        new moodle_url('/local/cohorts/index.php')
+        new url('/local/cohorts/index.php')
     ));
 }

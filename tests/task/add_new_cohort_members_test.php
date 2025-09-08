@@ -16,8 +16,8 @@
 
 namespace local_cohorts\task;
 
-use context_system;
-use Exception;
+use advanced_testcase;
+use core\context;
 use local_cohorts\helper;
 
 /**
@@ -29,7 +29,7 @@ use local_cohorts\helper;
  * @author Mark Sharp <mark.sharp@solent.ac.uk>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class add_new_cohort_members_test extends \advanced_testcase {
+final class add_new_cohort_members_test extends advanced_testcase {
     /**
      * Test task execute
      *
@@ -45,7 +45,7 @@ final class add_new_cohort_members_test extends \advanced_testcase {
         /** @var local_cohorts_generator $dg */
         $dg = $this->getDataGenerator()->get_plugin_generator('local_cohorts');
         $this->resetAfterTest();
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         // I don't want events to trigger for this test.
         $sink = $this->redirectEvents();
         $supportaccounts = ['academic', 'consultant', 'jobshop'];

@@ -16,17 +16,15 @@
 
 namespace local_cohorts\tables;
 
-use action_menu;
-use action_menu_link;
-use context;
-use context_system;
-use html_writer;
-use lang_string;
-use moodle_url;
-use paging_bar;
-use pix_icon;
+use core\context;
+use core\lang_string;
+use core\output\action_menu;
+use core\output\action_menu\link;
+use core\output\html_writer;
+use core\output\pix_icon;
+use core\url;
+use core_table\sql_table;
 use stdClass;
-use table_sql;
 
 defined('MOODLE_INTERNAL') || die();
 require_once("$CFG->libdir/tablelib.php");
@@ -39,7 +37,7 @@ require_once("$CFG->libdir/tablelib.php");
  * @author Mark Sharp <mark.sharp@solent.ac.uk>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class cohorts_table extends table_sql {
+class cohorts_table extends sql_table {
     /**
      * Constructor to set up table.
      *
@@ -73,7 +71,7 @@ class cohorts_table extends table_sql {
         $this->define_headers($columnheadings);
         $this->no_sorting('actions');
         $this->collapsible(false);
-        $this->define_baseurl(new moodle_url('/local/cohorts/index.php'));
+        $this->define_baseurl(new url('/local/cohorts/index.php'));
 
         $select = "c.*, lcs.enabled";
         $from = "{cohort} c
@@ -82,7 +80,7 @@ class cohorts_table extends table_sql {
             $where = "contextid = :contextid AND component = 'local_cohorts'";
 
         $this->set_sql($select, $from, $where, [
-            'contextid' => context_system::instance()->id,
+            'contextid' => context\system::instance()->id,
         ]);
     }
 
@@ -98,19 +96,19 @@ class cohorts_table extends table_sql {
         if (!has_capability('moodle/cohort:manage', $context)) {
             return '';
         }
-        $returnurl = new moodle_url('/local/cohorts/index.php');
+        $returnurl = new url('/local/cohorts/index.php');
         $actionmenu = new action_menu();
         $actionmenu->set_menu_trigger(get_string('actions'));
         $actionmenu->set_boundary('window');
-        $actionmenu->add(new action_menu_link(
-            new moodle_url('/local/cohorts/members.php', ['cohortid' => $row->id]),
+        $actionmenu->add(new link(
+            new url('/local/cohorts/members.php', ['cohortid' => $row->id]),
             new pix_icon('t/cohort', '', 'core'),
             get_string('viewmembers', 'local_cohorts'),
             false,
         ));
         if ($row->visible == 1) {
-            $actionmenu->add(new action_menu_link(
-                new moodle_url('/local/cohorts/edit.php', [
+            $actionmenu->add(new link(
+                new url('/local/cohorts/edit.php', [
                     'id' => $row->id,
                     'hide' => 1,
                     'returnurl' => $returnurl,
@@ -121,8 +119,8 @@ class cohorts_table extends table_sql {
                 false,
             ));
         } else {
-            $actionmenu->add(new action_menu_link(
-                new moodle_url('/local/cohorts/edit.php', [
+            $actionmenu->add(new link(
+                new url('/local/cohorts/edit.php', [
                     'id' => $row->id,
                     'show' => 1,
                     'returnurl' => $returnurl,
@@ -134,8 +132,8 @@ class cohorts_table extends table_sql {
             ));
         }
         if ($row->enabled == 1) {
-            $actionmenu->add(new action_menu_link(
-                new moodle_url('/local/cohorts/edit.php', [
+            $actionmenu->add(new link(
+                new url('/local/cohorts/edit.php', [
                     'id' => $row->id,
                     'disable' => 1,
                     'returnurl' => $returnurl,
@@ -146,8 +144,8 @@ class cohorts_table extends table_sql {
                 false,
             ));
         } else {
-            $actionmenu->add(new action_menu_link(
-                new moodle_url('/local/cohorts/edit.php', [
+            $actionmenu->add(new link(
+                new url('/local/cohorts/edit.php', [
                     'id' => $row->id,
                     'enable' => 1,
                     'returnurl' => $returnurl,
@@ -158,8 +156,8 @@ class cohorts_table extends table_sql {
                 false,
             ));
         }
-        $actionmenu->add(new action_menu_link(
-            new moodle_url('/local/cohorts/edit.php', [
+        $actionmenu->add(new link(
+            new url('/local/cohorts/edit.php', [
                 'id' => $row->id,
                 'delete' => 1,
                 'returnurl' => $returnurl,
@@ -204,7 +202,7 @@ class cohorts_table extends table_sql {
      * @return string
      */
     public function col_name($row): string {
-        $url = new moodle_url('/local/cohorts/members.php', ['cohortid' => $row->id]);
+        $url = new url('/local/cohorts/members.php', ['cohortid' => $row->id]);
         return html_writer::link($url, $row->name, ['title' => get_string('viewmembersof', 'local_cohorts', $row->name)]);
     }
 

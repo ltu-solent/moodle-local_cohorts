@@ -16,9 +16,9 @@
 
 namespace local_cohorts;
 
-use context_system;
+use core\context;
+use core\user;
 use core_text;
-use core_user;
 use stdClass;
 
 defined('MOODLE_INTERNAL') || die();
@@ -189,7 +189,7 @@ class helper {
      */
     public static function update_all_staff_cohort() {
         global $DB;
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         $config = get_config('local_cohorts');
 
         $cohort = $DB->get_record('cohort', [
@@ -284,8 +284,8 @@ class helper {
     public static function sync_user_profile_cohort(int $userid) {
         global $DB;
         $config = get_config('local_cohorts');
-        $user = core_user::get_user($userid);
-        $systemcontext = context_system::instance();
+        $user = user::get_user($userid);
+        $systemcontext = context\system::instance();
         $inparams['userid'] = $userid;
         $inparams['contextid'] = $systemcontext->id;
         $existingmembership = $DB->get_records_sql("
@@ -460,7 +460,7 @@ class helper {
      */
     public static function migrate_cohorts() {
         global $DB, $USER;
-        $context = context_system::instance();
+        $context = context\system::instance();
         $cohorts = $DB->get_records('cohort', [
             'contextid' => $context->id,
             'component' => '',
@@ -526,7 +526,7 @@ class helper {
     public static function adopt_a_cohort($cohortid): bool {
         global $DB, $USER;
         $cohort = $DB->get_record('cohort', ['id' => $cohortid]);
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         if ($cohort->contextid != $systemcontext->id) {
             // Only interested in system cohorts, for now.
             return false;

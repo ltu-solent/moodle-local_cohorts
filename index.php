@@ -22,16 +22,18 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\context;
+use core\url;
 use local_cohorts\tables\cohorts_table;
 
 require('../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
 
 admin_externalpage_setup('local_cohorts_cohorts');
-$context = context_system::instance();
+$context = context\system::instance();
 require_capability('moodle/cohort:manage', $context);
 
-$url = new moodle_url('/local/cohorts/index.php', []);
+$url = new url('/local/cohorts/index.php', []);
 $PAGE->set_url($url);
 $PAGE->set_context(context_system::instance());
 

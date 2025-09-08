@@ -16,7 +16,8 @@
 
 namespace local_cohorts\task;
 
-use context_system;
+use advanced_testcase;
+use core\context;
 use core_customfield\category;
 use core_customfield\field;
 use local_cohorts\helper;
@@ -29,7 +30,7 @@ use local_cohorts\helper;
  * @copyright  2024 Solent University {@link https://www.solent.ac.uk}
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class location_cohort_sync_test extends \advanced_testcase {
+final class location_cohort_sync_test extends advanced_testcase {
     /**
      * Test local_cohort_sync
      *
@@ -150,7 +151,7 @@ final class location_cohort_sync_test extends \advanced_testcase {
         $task = new location_cohort_sync();
         $task->execute();
 
-        $systemcontext = context_system::instance();
+        $systemcontext = context\system::instance();
         // Using Regex here as the output is too complicated to exactly match string.
         $expectedoutputregex = "#Start processing for \".*\" cohort#";
         $this->expectOutputRegex($expectedoutputregex);
@@ -338,7 +339,7 @@ final class location_cohort_sync_test extends \advanced_testcase {
                 'description' => 'Fields managed by the university\'s Student records system. Do not change unless asked to.',
                 'area' => 'course',
                 'component' => 'core_course',
-                'contextid' => context_system::instance()->id,
+                'contextid' => context\system::instance()->id,
             ]);
             $category->save();
         }
